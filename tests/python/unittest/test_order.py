@@ -23,7 +23,7 @@ def test_order_simple():
     x = mx.nd.array([[(5, 6, 7), (4, 9, 6)]])
     result = mx.nd.topk(x, ret_typ='value')
     # Should be the index 2 (for val 7) and index 1 (for val 9)
-    assert_almost_equal(result.asnumpy(), np.array([[(2,), (1,)]]))
+    assert_almost_equal(result.asnumpy(), np.array([[(7,), (9,)]]))
 
 
 def test_order():

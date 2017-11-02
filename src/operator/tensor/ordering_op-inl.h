@@ -258,11 +258,14 @@ void SortImpl(RunContext ctx,
                                  Shape1(src.Size()), s);  // batch id in the original matrix
   std::cout<<"Incrementing workspace pointer by : "<<sizeof(int) * src.Size()<<std::endl;
   workspace_curr_ptr += sizeof(int) * src.Size();
+  std::cout<<"dat shape: "<<dat.shape_<<std::endl;
   if (do_transpose) {
     sorted_dat = reshape(transpose(dat, Shape3(0, 2, 1)), Shape1(src.Size()));
   } else {
     sorted_dat = reshape(dat, Shape1(src.Size()));
   }
+
+  std::cout<<"dat shape: "<<sorted_dat.shape_<<std::endl;
   mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, 0, 1,
     kWriteTo, indices.dptr_);
 
@@ -351,13 +354,22 @@ void SortImpl(RunContext ctx,
       std::cout<<"Source shape 0: "<<ret[0].shape_<<std::endl;
       std::cout<<"Batch size: "<<batch_size<<std::endl;
       std::cout<<"k: "<<k<<std::endl;
+      std::cout<<"ret size: "<<ret.size()<<std::endl;
+      for (auto tensor : ret) {
+        std::cout<<"Return tensor shape: "<<tensor.shape_<<std::endl;
+      }
       Tensor<xpu, 2, real_t> ret_value =
         ret[0].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
       Tensor<xpu, 2, real_t> ret_indices =
         ret[1].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
       ret_value = slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k);
+      std::cout<<"ret_value: "<<ret_value[0][0]<<std::endl;
+      std::cout<<"ret_value: "<<ret_value[1][0]<<std::endl;
+
       ret_indices = tcast<real_t>(slice<1>(
                       inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
+      std::cout<<"ret_indices: "<<ret_indices[0][0]<<std::endl;
+      std::cout<<"ret_indices: "<<ret_indices[1][0]<<std::endl;
     }
   }
 }

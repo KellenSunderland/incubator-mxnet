@@ -52,6 +52,13 @@ TEST(Order, basic_top_k) {
   std::vector<TBlob> inputs;
   Tensor<cpu, 3, float> input_tensor(Shape3(1, 2, 3));
   inputs.emplace_back(input_tensor);
+  AllocSpace(&input_tensor);
+  input_tensor[0][0][0] = 5;
+  input_tensor[0][0][1] = 6;
+  input_tensor[0][0][2] = 7;
+  input_tensor[0][1][0] = 4;
+  input_tensor[0][1][1] = 9;
+  input_tensor[0][1][2] = 6;
 
   // Set request type.
   std::vector<OpReqType> request_types;
@@ -60,11 +67,20 @@ TEST(Order, basic_top_k) {
   // Create outputs
   std::vector<TBlob> outputs;
   Tensor<cpu, 3, float> destination_values(Shape3(1, 2, 1));
-  //Tensor<cpu, 3, float> destination_idices(Shape3(1, 2, 1));
+  Tensor<cpu, 3, float> destination_idices(Shape3(1, 2, 1));
+  AllocSpace(&destination_values);
+  AllocSpace(&destination_idices);
   outputs.emplace_back(destination_values);
-  //outputs.emplace_back(destination_idices);
+  outputs.emplace_back(destination_idices);
+
 
   TopK<cpu>(attrs, ctx, inputs, request_types, outputs);
+  std::cout<<destination_values[0][0][0]<<std::endl;
+  std::cout<<destination_values[0][1][0]<<std::endl;
+  std::cout<<destination_idices[0][0][0]<<std::endl;
+  std::cout<<destination_idices[0][1][0]<<std::endl;
+  EXPECT_LE(std::abs(destination_values[0][0][0] - 7.0f), 1e-10);
+  EXPECT_LE(std::abs(destination_values[0][1][0] - 9.0f), 1e-10);
 }
 
 } // namespace op
