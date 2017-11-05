@@ -3619,6 +3619,7 @@ def test_custom_op():
         y.backward()
 
 
+@attr('nightly')
 def test_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
