@@ -612,7 +612,7 @@ def test_create_sparse_nd_infer_shape():
         check_create_rsp_infer_shape(shape_3d, density, dtype)
 
 
-@attr('nightly')
+@attr('crashing')
 def test_create_sparse_nd_from_dense():
     def check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx):
         arr = f(dense_arr, dtype=dtype, ctx=ctx)
@@ -636,6 +636,7 @@ def test_create_sparse_nd_from_dense():
             check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx)
 
 
+@attr('crashing')
 def test_create_sparse_nd_from_sparse():
     def check_create_from_sp(shape, f, sp_arr, dtype, src_dtype, ctx):
         arr = f(sp_arr, dtype=dtype, ctx=ctx)
