@@ -2574,6 +2574,7 @@ def test_init():
     test_arange()
 
 
+@attr('nightly')
 def test_order():
     ctx = default_context()
 
