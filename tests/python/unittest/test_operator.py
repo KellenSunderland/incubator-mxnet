@@ -4207,6 +4207,7 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
+@attr('nightly')
 def test_laop_4():
     # Currently disabled on GPU as syevd needs cuda8
     # and MxNet builds use cuda 7.5
