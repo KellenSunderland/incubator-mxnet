@@ -2212,6 +2212,7 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 
+@attr('nightly')
 def test_l2_normalization():
     for mode in ['channel', 'spatial', 'instance']:
         for nbatch in [1, 4]:
@@ -3367,6 +3368,7 @@ def test_log_softmax():
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 
+@attr('nightly')
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
