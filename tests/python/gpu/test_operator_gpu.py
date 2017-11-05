@@ -1232,6 +1232,8 @@ def test_deformable_psroipooling_with_type():
                                                'deformable_psroipool_rois': 'null',
                                                'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
 
+
+@attr('nightly')
 def test_deformable_convolution_with_type():
     np.random.seed(1234)
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
