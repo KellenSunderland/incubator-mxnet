@@ -568,6 +568,7 @@ def test_create_row_sparse():
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
 
+@attr('nightly')
 def test_create_sparse_nd_infer_shape():
     def check_create_csr_infer_shape(shape, density, dtype):
         try:
