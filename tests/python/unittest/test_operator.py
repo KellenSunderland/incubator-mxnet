@@ -23,6 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from nose.plugins.attrib import attr
 import unittest
 
 
@@ -1267,6 +1268,7 @@ def test_binary_op():
     test_bneq(a, b)
 
 
+@attr('nightly')
 def test_broadcast_binary_op():
     def check_bmaxmin_gradient(test_sym, x, y, delta, rtol, atol):
         """This function ensures that checking the numerical gradient of
@@ -2225,6 +2227,7 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 
+@attr('nightly')
 def test_l2_normalization():
     for mode in ['channel', 'spatial', 'instance']:
         for nbatch in [1, 4]:
@@ -2586,6 +2589,7 @@ def test_init():
     test_arange()
 
 
+@attr('nightly')
 def test_order():
     ctx = default_context()
 
@@ -3380,6 +3384,7 @@ def test_log_softmax():
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 
+@attr('nightly')
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
@@ -3634,6 +3639,7 @@ def test_custom_op():
         y.backward()
 
 
+@attr('nightly')
 def test_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
@@ -3659,6 +3665,7 @@ def test_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
+@attr('nightly')
 def test_deformable_convolution():
     for num_batch in [1, 2]:
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
@@ -3696,6 +3703,7 @@ def test_deformable_convolution():
                                                    grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
+@attr('nightly')
 def test_deformable_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
