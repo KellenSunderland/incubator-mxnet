@@ -23,6 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from nose.plugins.attrib import attr
 import unittest
 
 
@@ -1266,6 +1267,7 @@ def test_binary_op():
     test_bneq(a, b)
 
 
+@attr('nightly')
 def test_broadcast_binary_op():
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
