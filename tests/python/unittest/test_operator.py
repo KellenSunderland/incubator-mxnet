@@ -3619,6 +3619,7 @@ def test_custom_op():
         y.backward()
 
 
+@attr('nightly')
 def test_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
@@ -3644,6 +3645,7 @@ def test_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
+@attr('nightly')
 def test_deformable_convolution():
     for num_batch in [1, 2]:
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
