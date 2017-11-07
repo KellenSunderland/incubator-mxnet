@@ -391,27 +391,28 @@ void SortImpl(RunContext ctx,
                       inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
       // std::cout<<"ret_indices: "<<ret_indices[0][0]<<std::endl;
       // std::cout<<"ret_indices: "<<ret_indices[1][0]<<std::endl;
-      auto finished = std::chrono::high_resolution_clock::now();
-
-      std::cout<<"Tensor operations before sort:" <<
-      std::chrono::duration_cast<std::chrono::nanoseconds>(first_sort-begin).count() <<
-          "ns" << std::endl;
-
-      std::cout<<"First sort:" <<
-               std::chrono::duration_cast<std::chrono::nanoseconds>(second_sort-first_sort).count
-                   () <<
-               "ns" << std::endl;
-
-      std::cout<<"Second sort:" <<
-               std::chrono::duration_cast<std::chrono::nanoseconds>(third_sort-second_sort).count
-                   () <<
-               "ns" << std::endl;
-
-      std::cout<<"Third sort:" <<
-               std::chrono::duration_cast<std::chrono::nanoseconds>(finished-third_sort).count() <<
-               "ns" << std::endl;
     }
   }
+
+  auto finished = std::chrono::high_resolution_clock::now();
+
+  std::cout<<"Tensor operations before sort:" <<
+           std::chrono::duration_cast<std::chrono::nanoseconds>(first_sort-begin).count() <<
+           "ns" << std::endl;
+
+  std::cout<<"First sort:" <<
+           std::chrono::duration_cast<std::chrono::nanoseconds>(second_sort-first_sort).count
+               () <<
+           "ns" << std::endl;
+
+  std::cout<<"Second sort:" <<
+           std::chrono::duration_cast<std::chrono::nanoseconds>(third_sort-second_sort).count
+               () <<
+           "ns" << std::endl;
+
+  std::cout<<"Third sort:" <<
+           std::chrono::duration_cast<std::chrono::nanoseconds>(finished-third_sort).count() <<
+           "ns" << std::endl;
 }
 
 template<typename xpu>
