@@ -60,7 +60,7 @@ Examples::
     .set_attr<nnvm::FInferShape>("FInferShape", TopKShape)
     .set_attr<nnvm::FInferType>("FInferType", TopKType)
     .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", TopKNumVisibleOutputs)
-    .set_attr<FCompute>("FCompute<cpu>", TopK<cpu>)
+    .set_attr<FCompute>("FCompute<cpu>", FastTopK)
     .set_attr<nnvm::FGradient>("FGradient",
                                [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
                                  const TopKParam& param = nnvm::get<TopKParam>(n->attrs.parsed);

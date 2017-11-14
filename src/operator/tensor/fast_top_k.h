@@ -17,6 +17,8 @@
 namespace mxnet {
 namespace op {
 
+using namespace mshadow;
+
 /*!
  * \brief Implementation of the TopK operation
  *
@@ -29,8 +31,7 @@ namespace op {
  * \param param the topk parameters
  * \tparam xpu the device type.
  */
-template<>
-void FastTopKImpl(Stream<cpu> s,
+void FastTopKImpl(Stream<cpu>* s,
               Resource resource,
               const TBlob &src,
               const std::vector<TBlob> &ret,
@@ -235,7 +236,6 @@ void FastTopKImpl(Stream<cpu> s,
            "ns" << std::endl;
 }
 
-template<typename xpu>
 void FastTopK(const nnvm::NodeAttrs& attrs,
           const OpContext& ctx,
           const std::vector<TBlob>& inputs,
@@ -244,7 +244,7 @@ void FastTopK(const nnvm::NodeAttrs& attrs,
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   // TODO(sxjscience) We can support inplace in the future
   CHECK_EQ(req[0], kWriteTo) << "TopK does not support inplace";
-  FastTopKImpl<xpu>(ctx.run_ctx.get_stream(), ctx.requested[0], inputs[0], outputs, param);
+  FastTopKImpl(ctx.run_ctx.get_stream<cpu>(), ctx.requested[0], inputs[0], outputs, param);
 }
 
 }  // namespace op
