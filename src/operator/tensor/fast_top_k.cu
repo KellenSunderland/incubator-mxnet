@@ -185,110 +185,113 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
   __shared__ volatile uint32_t sValue[64 * 4];
 
 
+  printf("Starting ...\n");
   uint32_t pos                    = (blockIdx.x * blockDim.x + threadIdx.x) >> cData._warpBits;
   uint32_t tgx                    = threadIdx.x & cData._warpMask;
 
   if (pos < batch)
   {
-  NNFloat *pOutput            = pOutputBuffer + pos * width;
-  uint32_t offset             = threadIdx.x >> cData._warpBits;
-  volatile NNFloat* psKey     = &sKey[64 * offset];
-  volatile uint32_t* psValue  = &sValue[64 * offset];
+    printf("Got past past < batch ...\n");
+    NNFloat *pOutput            = pOutputBuffer + pos * width;
+    uint32_t offset             = threadIdx.x >> cData._warpBits;
+    volatile NNFloat* psKey     = &sKey[64 * offset];
+    volatile uint32_t* psValue  = &sValue[64 * offset];
 
-  // Initialize values to
-  NNFloat k0                  = -MAX_VALUE;
-  NNFloat k1                  = -MAX_VALUE;
-  uint32_t v0                 = 0;
-  uint32_t v1                 = 0;
+    // Initialize values to
+    NNFloat k0                  = -MAX_VALUE;
+    NNFloat k1                  = -MAX_VALUE;
+    uint32_t v0                 = 0;
+    uint32_t v1                 = 0;
 
-  // Read first 32 elements into registers
-  uint32_t wpos               = tgx;
-  if (wpos < width)
-  {
-  k0                      = pOutput[wpos];
-  v0                      = wpos;
-  }
-  wpos                       += cData._warpSize;
+    // Read first 32 elements into registers
+    uint32_t wpos               = tgx;
+    if (wpos < width)
+    {
+      k0                      = pOutput[wpos];
+      v0                      = wpos;
+    }
+    wpos                       += cData._warpSize;
 
-  // Run through remainder of data
-  NNFloat minValue            = -MAX_VALUE;
-  uint32_t rpos               = 32;
-  uint32_t bufferSize         = 0;
-  NNFloat key1, key2;
-  uint32_t value1, value2;
-  uint32_t otgx;
-  bool flag;
-  while (rpos < width)
-  {
-  // Read block of data
-  unsigned wpos           = rpos + tgx;
-  NNFloat key             = -MAX_VALUE;
-  uint32_t value          = wpos;
-  if (wpos < width)
-  {
-  key                 = pOutput[wpos];
-  }
+    // Run through remainder of data
+    NNFloat minValue            = -MAX_VALUE;
+    uint32_t rpos               = 32;
+    uint32_t bufferSize         = 0;
+    NNFloat key1, key2;
+    uint32_t value1, value2;
+    uint32_t otgx;
+    bool flag;
+    while (rpos < width)
+    {
+      printf("loop ...\n");
+      // Read block of data
+      unsigned wpos           = rpos + tgx;
+      NNFloat key             = -MAX_VALUE;
+      uint32_t value          = wpos;
+      if (wpos < width)
+      {
+        key                 = pOutput[wpos];
+      }
 
-  // Add values > minValue to shared memory buffer
-  uint32_t count          = BALLOT(key > minValue);
-  if (key > minValue)
-  {
-  uint32_t mask       = 0xffffffff >> (32 - tgx);
-  uint32_t offset     = __popc(count & mask);
-  offset             += bufferSize;
-  psKey[offset]       = key;
-  psValue[offset]     = value;
-  }
-  bufferSize             += __popc(count);
+      // Add values > minValue to shared memory buffer
+      uint32_t count          = BALLOT(key > minValue);
+      if (key > minValue)
+      {
+        uint32_t mask       = 0xffffffff >> (32 - tgx);
+        uint32_t offset     = __popc(count & mask);
+        offset             += bufferSize;
+        psKey[offset]       = key;
+        psValue[offset]     = value;
+      }
+      bufferSize             += __popc(count);
 
-  // Check if buffer is full
-  if (bufferSize >= 32)
-  {
-  // Sort 64 elements
-  k1                  = psKey[tgx];
-  v1                  = psValue[tgx];
-  bool flag;
-  BITONICSORT64_64();
+      // Check if buffer is full
+      if (bufferSize >= 32)
+      {
+        // Sort 64 elements
+        k1                  = psKey[tgx];
+        v1                  = psValue[tgx];
+        bool flag;
+        BITONICSORT64_64();
 
-  // Shift members in shared memory to beginning
-  bufferSize         -= 32;
-  if (tgx < bufferSize)
-  {
-  psKey[tgx]      = psKey[tgx + 32];
-  psValue[tgx]    = psValue[tgx + 32];
-  }
-  }
+        // Shift members in shared memory to beginning
+        bufferSize         -= 32;
+        if (tgx < bufferSize)
+        {
+          psKey[tgx]      = psKey[tgx + 32];
+          psValue[tgx]    = psValue[tgx + 32];
+        }
+      }
 
-  // Advance to next block of data
-  rpos                    += cData._warpSize;
-  }
+      // Advance to next block of data
+      rpos                    += cData._warpSize;
+    }
 
-  // Do final sort if buffer has any remaining data
-  if ((bufferSize > 0) || (width <= 32))
-  {
-  // Store sentinel values in registers
-  k1                       = -MAX_VALUE;
-  v1                       = 0;
+    // Do final sort if buffer has any remaining data
+    if ((bufferSize > 0) || (width <= 32))
+    {
+      // Store sentinel values in registers
+      k1                       = -MAX_VALUE;
+      v1                       = 0;
 
-  // Load last block of unsorted data into registers
-  if (tgx < bufferSize)
-  {
-  k1                   = psKey[tgx];
-  v1                   = psValue[tgx];
-  }
-  BITONICSORT64_64();
-  }
+      // Load last block of unsorted data into registers
+      if (tgx < bufferSize)
+      {
+        k1                   = psKey[tgx];
+        v1                   = psValue[tgx];
+      }
+      BITONICSORT64_64();
+    }
 
-  // Copy results to key and value pointers
-  NNFloat* pKey                = pKeyBuffer + pos * k;
-  uint32_t* pValue             = pValueBuffer + pos * k;
-  wpos                         = tgx;
-  if (wpos < k)
-  {
-  pKey[wpos]               = k0;
-  pValue[wpos]             = v0;
-  }
-  wpos                        += cData._warpSize;
+    // Copy results to key and value pointers
+    NNFloat* pKey                = pKeyBuffer + pos * k;
+    uint32_t* pValue             = pValueBuffer + pos * k;
+    wpos                         = tgx;
+    if (wpos < k)
+    {
+      pKey[wpos]               = k0;
+      pValue[wpos]             = v0;
+    }
+    wpos                        += cData._warpSize;
   }
 }
 
@@ -296,6 +299,7 @@ void kCalculateTopK(NNFloat* pOutput, NNFloat *pKey, uint32_t* pValue, uint32_t 
 {
   uint32_t blocks = (batch + 3) / 4;
   if (k <= 32) {
+    std::cout<<"Launching some stuff"<<std::endl;
     kCalculateTopK_32_kernel<<<blocks, 128>>>(pOutput, pKey, pValue, batch, width, k);
     LAUNCHERROR_BLOCKING("kCalculateTopK_32_kernel");
   }
@@ -369,8 +373,9 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   values = Tensor<gpu, 1, NNFloat>(reinterpret_cast<NNFloat*>(workspace_curr_ptr), Shape1(src.Size()), s);
   workspace_curr_ptr += sizeof(NNFloat) * src.Size();
 
-  sorted_dat = src.FlatTo1D<gpu, real_t>(s);
 
+  sorted_dat = src.FlatTo1D<gpu, real_t>(s);
+  std::cout<<"Reshaped data size: "<<sorted_dat.shape_<<std::endl;
   mxnet_op::Kernel<range_fwd, gpu>::Launch(s, batch_size * element_num, 1, 0, 1,
                                            kWriteTo, indices.dptr_);
 
