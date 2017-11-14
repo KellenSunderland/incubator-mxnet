@@ -70,6 +70,31 @@ __device__ inline int64_t ullitolli(uint64_t u)
 #define ANY(predicate) __any(predicate)
 #endif // CUDA_VERSION >= 9000
 
+#define LAUNCHERROR(s) \
+    { \
+        cudaError_t status = cudaGetLastError(); \
+        if (status != cudaSuccess) { \
+            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
+            exit(-1); \
+        } \
+    }
+#define LAUNCHERROR_BLOCKING(s) \
+    { \
+        cudaError_t status = cudaGetLastError(); \
+        if (status != cudaSuccess) { \
+            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
+            exit(-1); \
+        } \
+        cudaDeviceSynchronize(); \
+    }
+#define LAUNCHERROR_NONBLOCKING(s) \
+    { \
+        cudaError_t status = cudaGetLastError(); \
+        if (status != cudaSuccess) { \
+            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
+            exit(-1); \
+        } \
+    }
 
 #define REDUCEERROR(error) \
     if (ANY(error != (NNFloat)0.0)) \
@@ -272,7 +297,7 @@ void kCalculateTopK(NNFloat* pOutput, NNFloat *pKey, uint32_t* pValue, uint32_t 
   uint32_t blocks = (batch + 3) / 4;
   if (k <= 32) {
     kCalculateTopK_32_kernel<<<blocks, 128>>>(pOutput, pKey, pValue, batch, width, k);
-    // LAUNCHERROR("kCalculateTopK_32_kernel");
+    LAUNCHERROR_BLOCKING("kCalculateTopK_32_kernel");
   }
   else {
     std::cout<<"Not currently supported"<<std::endl;
@@ -301,12 +326,16 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   for (auto ret_ele : ret) {
     CHECK_EQ(ret_ele.type_flag_, src.type_flag_);
   }
+
+  std::cout<<"ret 0 shape: "<<ret[0].shape_<<std::endl;
+  std::cout<<"ret 1 shape: "<<ret[1].shape_<<std::endl;
+
   // 1. Parse and initialize information
   Tensor<gpu, 1, char> workspace;
   Tensor<gpu, 1, char> temp_workspace;
   Tensor<gpu, 1, real_t> sorted_dat;
   Tensor<gpu, 1, int> indices, batch_id, sel_indices;
-  Tensor<gpu, 2, real_t> mask_val;
+  Tensor<gpu, 1, NNFloat> values;
   int batch_size, element_num;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
@@ -315,17 +344,17 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
-  Tensor<gpu, 3, real_t> dat = src.FlatTo3D<gpu, real_t>(axis, axis, s);
+  std::cout<<"target_shape is: "<<target_shape<<std::endl;
+  std::cout<<"src.shape_ is: "<<src.shape_<<std::endl;
+  std::cout<<"batch_size is: "<<batch_size<<std::endl;
+  //  Tensor<gpu, 3, real_t> dat = src.FlatTo3D<gpu, real_t>(axis, axis, s);
   size_t temp_size = mxnet::op::SortByKeyWorkspaceSize<int, int, gpu>(src.Size());
-  // std::cout<<"temp_size is: "<<temp_size<<std::endl;
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, real_t, gpu>(src.Size()));
-  // std::cout<<"temp_size is: "<<temp_size<<std::endl;
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<real_t, int, gpu>(src.Size()));
-  // std::cout<<"temp_size is: "<<temp_size<<std::endl;
-  size_t workspace_size = temp_size + sizeof(real_t) * src.Size() + sizeof(int) * src.Size() * 2;
-  if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += sizeof(int) * batch_size * k + sizeof(real_t) * batch_size * k;
-  }
+  std::cout<<"temp_size is: "<<temp_size<<std::endl;
+  size_t workspace_size = temp_size + sizeof(real_t) * src.Size() + sizeof(int) * src.Size()
+      * 2 + sizeof(NNFloat) * src.Size();  // TODO: K sized?
+  std::cout<<"workspace_size is: "<<workspace_size<<std::endl;
   workspace = resource.get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<gpu, 1, real_t>(reinterpret_cast<real_t*>(workspace_curr_ptr),
@@ -337,28 +366,16 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   batch_id = Tensor<gpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
                                  Shape1(src.Size()), s);  // batch id in the original matrix
   workspace_curr_ptr += sizeof(int) * src.Size();
-  if (do_transpose) {
-    sorted_dat = reshape(transpose(dat, Shape3(0, 2, 1)), Shape1(src.Size()));
-  } else {
-    sorted_dat = reshape(dat, Shape1(src.Size()));
-  }
+  values = Tensor<gpu, 1, NNFloat>(reinterpret_cast<NNFloat*>(workspace_curr_ptr), Shape1(src.Size()), s);
+  workspace_curr_ptr += sizeof(NNFloat) * src.Size();
+
+  sorted_dat = src.FlatTo1D<gpu, real_t>(s);
 
   mxnet_op::Kernel<range_fwd, gpu>::Launch(s, batch_size * element_num, 1, 0, 1,
                                            kWriteTo, indices.dptr_);
 
   CHECK_EQ(sorted_dat.CheckContiguous(), true);
   CHECK_EQ(indices.CheckContiguous(), true);
-  if (param.ret_typ == topk_enum::kReturnMask) {
-    sel_indices = Tensor<gpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
-                                      Shape1(batch_size * k), s);
-    workspace_curr_ptr += sizeof(int) * batch_size * k;
-    mask_val = Tensor<gpu, 2, real_t>(reinterpret_cast<real_t*>(workspace_curr_ptr),
-                                      Shape2(batch_size * k, 1), s);
-    workspace_curr_ptr += sizeof(real_t) * batch_size * k;
-    mask_val = scalar<real_t>(1);
-    CHECK_EQ(sel_indices.CheckContiguous(), true);
-    CHECK_EQ(mask_val.CheckContiguous(), true);
-  }
   temp_workspace = Tensor<gpu, 1, char>(workspace_curr_ptr, Shape1(temp_size), s);  // temp space
   workspace_curr_ptr += temp_size;
   // 2. Perform inplace batch sort using the `SortByKey` in MShadow
@@ -367,78 +384,44 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   // Sort the data and keep record of the correspondence to global indices.
   // Instead do a kCalculateTopK
 
-  mxnet::op::SortByKey(sorted_dat, indices, is_ascend, &temp_workspace);
+  // kCalculateTopK(NNFloat* pOutput, NNFloat *pKey, uint32_t* pValue, uint32_t batch, uint32_t
+  // width, uint32_t k)
+  // Pass in ret[0] as first argument.
+  kCalculateTopK(reinterpret_cast<NNFloat*>(sorted_dat.dptr_),
+                 values.dptr_,
+                 reinterpret_cast<uint32_t*>(indices.dptr_), 32, 32, 5);
+
+//  mxnet::op::SortByKey(sorted_dat, indices, is_ascend, &temp_workspace);
 
   // Iterate over sorted_date (shape 6)
   // Calculate the corresponding batch indices of the elements
-  batch_id = indices / element_num;
+  //batch_id = indices / element_num;
   // Since the SortByKey performs stable sort, the second SortByKey will reorder
   //   the sorted_dat based on the order of the batch_id
 
-  mxnet::op::SortByKey(batch_id, sorted_dat, true, &temp_workspace);
+  //mxnet::op::SortByKey(batch_id, sorted_dat, true, &temp_workspace);
   // Reorder the indices
-  batch_id = indices / element_num;
-  mxnet::op::SortByKey(batch_id, indices, true, &temp_workspace);
+  //batch_id = indices / element_num;
+  //mxnet::op::SortByKey(batch_id, indices, true, &temp_workspace);
   // 3. Assign results to the ret blob
-  if (param.ret_typ == topk_enum::kReturnMask) {
-    Tensor<gpu, 2, real_t> ret_mask =
-        ret[0].get_with_shape<gpu, 2, real_t>(Shape2(ret[0].Size(), 1), s);
-    ret_mask = scalar<real_t>(0);
-    sel_indices = reshape(slice<1>(
-        inplace_reshape(indices,
-                        Shape2(batch_size,
-                               element_num)), 0, k),
-                          Shape1(batch_size * k));
-    if (do_transpose) {
-      TShape src_shape = src.shape_.FlatTo3D(axis);
-      CHECK_EQ(sel_indices.CheckContiguous(), true);
-      sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
-                                      Shape3(0, 2, 1));
-    }
-    IndexFill(ret_mask, sel_indices, mask_val);
-  } else if (param.ret_typ == topk_enum::kReturnIndices) {
+
+  std::cout<<"We are quite happy"<<std::endl;
+  if (param.ret_typ == topk_enum::kReturnIndices) {
     indices -= batch_id * element_num;
-    if (do_transpose) {
-      Tensor<gpu, 3, real_t> ret_indices = ret[0].FlatTo3D<gpu, real_t>(axis, axis, s);
-      ret_indices = tcast<real_t>(transpose(
-          slice<2>(inplace_reshape(indices,
-                                   Shape3(ret_indices.shape_[0],
-                                          ret_indices.shape_[2],
-                                          element_num)),
-                   0, k),
-          Shape3(0, 2, 1)));
-    } else {
-      Tensor<gpu, 2, real_t> ret_indices =
-          ret[0].get_with_shape<gpu, 2, real_t>(Shape2(batch_size, k), s);
-      ret_indices = tcast<real_t>(slice<1>(
-          inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
-    }
+    Tensor<gpu, 2, real_t> ret_indices =
+        ret[0].get_with_shape<gpu, 2, real_t>(Shape2(batch_size, k), s);
+    ret_indices = tcast<real_t>(slice<1>(
+        inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
+
   } else {
     indices -= batch_id * element_num;
-    if (do_transpose) {
-      Tensor<gpu, 3, real_t> ret_value = ret[0].FlatTo3D<gpu, real_t>(axis, axis, s);
-      Tensor<gpu, 3, real_t> ret_indices = ret[1].FlatTo3D<gpu, real_t>(axis, axis, s);
-      ret_value = transpose(
-          slice<2>(inplace_reshape(sorted_dat,
-                                   Shape3(ret_value.shape_[0], ret_value.shape_[2], element_num)),
-                   0, k),
-          Shape3(0, 2, 1));
-      ret_indices = tcast<real_t>(transpose(
-          slice<2>(inplace_reshape(indices,
-                                   Shape3(ret_indices.shape_[0],
-                                          ret_indices.shape_[2],
-                                          element_num)),
-                   0, k),
-          Shape3(0, 2, 1)));
-    } else {
-      Tensor<gpu, 2, real_t> ret_value =
-          ret[0].get_with_shape<gpu, 2, real_t>(Shape2(batch_size, k), s);
-      Tensor<gpu, 2, real_t> ret_indices =
-          ret[1].get_with_shape<gpu, 2, real_t>(Shape2(batch_size, k), s);
-      ret_value = slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k);
-      ret_indices = tcast<real_t>(slice<1>(
-          inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
-    }
+    Tensor<gpu, 2, real_t> ret_value =
+        ret[0].get_with_shape<gpu, 2, real_t>(Shape2(batch_size, k), s);
+    Tensor<gpu, 2, real_t> ret_indices =
+        ret[1].get_with_shape<gpu, 2, real_t>(Shape2(batch_size, k), s);
+    ret_value = slice<1>(inplace_reshape(values, Shape2(batch_size, element_num)), 0, k);
+    ret_indices = tcast<real_t>(slice<1>(
+        inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
   }
 }
 
