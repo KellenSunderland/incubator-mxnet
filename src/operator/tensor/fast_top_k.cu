@@ -125,57 +125,20 @@ __device__ inline int64_t ullitolli(uint64_t u)
 
 // Contains information that needs to be accessible for GPU kernels and most static hyperparameters
 struct GpuData {
-  unsigned int            _warpSize;                  // Warp size
-  unsigned int            _warpBits;                  // Warp bit count
-  unsigned int            _warpMask;                  // Masks bits within a warp
-  unsigned long long int* _pAccumulator;              // Accumulator for error calculations
-
-  // Local response normalization settings
-  float                   _LRN_k;                     // LRN offset
-  int                     _LRN_n;                     // LRN spread
-  float                   _LRN_alpha;                 // LRN scaling
-  float                   _LRN_beta;                  // LRN exponent
-
-  // Maxout parameters
-  int                     _maxout_k;                  // Maxout neighborhood
-
-  // Delta Boost parameters
-  float                   _deltaBoost_one;            // Adjusts scaling of nonzero-valued outputs
-  float                   _deltaBoost_zero;           // Adjusts scaling of zero-valued outputs
-
-  // Scaled Marginal Cross Entropy parameters
-  float                   _SMCE_oneTarget;            // Relaxed target for non-zero target values (Default 0.9)
-  float                   _SMCE_zeroTarget;           // Relaxed target for zero target values (Default 0.1)
-  float                   _SMCE_oneScale;             // Scaling factor for non-zero target values (Default 1.0)
-  float                   _SMCE_zeroScale;            // Scaling factor for zero target values (Default 1.0)
-
-  // Sparseness penalty for sparse hidden layers
-  bool                    _bSparsenessPenalty;        // Controls whether sparse penalty should be applied to hidden layers
-  float                   _sparsenessPenalty_p;       // Target sparseness probability for autoencoder
-  float                   _sparsenessPenalty_beta;    // Sparse penalty weight on sparse hidden units
-
-  // Denoising parameters for sparse input layers
-  bool                    _bDenoising;                // Controls whether to apply denoising to nonzero inputs to sparse input layers
-  float                   _denoising_p;               // Probability of denoising nonzero inputs to sparse input layers
-  float                   _denoising_q;               // 1 / (1 - p) used to keep neuron weights constant
-
-  // Example shuffling parameters
-  bool                    _bShuffleIndices;           // Determines whether to directly look up examples or not
-  unsigned int*           _pShuffleIndex;             // Index to shuffled training examples
-
-  // Numeric limits
-  uint32_t                _maxUint32_t;               // Language-constrained maximum 32-bit unsigned int value
-  int32_t                 _maxInt32_t;                // Language-constrained maximum 32-bit int value
-  uint64_t                _maxUint64_t;               // Language-constrained maximum 64-bit unsigned int value
-  int64_t                 _maxInt64_t;                // Language-constrained maximum 64-bit int value
-  float                   _maxFloat;                  // Language-constrained maximum 32-bit floating point value
-  float                   _minFloat;                  // Language-constrained minimum 32-bit floating point value
+  unsigned int _warpSize; // Warp size
+  unsigned int _warpBits; // Warp bit count
+  unsigned int _warpMask; // Masks bits within a warp
+  unsigned long long int* _pAccumulator; // Accumulator for error calculations
 };
 
 
 typedef float NNFloat;
 static const float MAX_VALUE = 999999999999999.0f;
-static __constant__ GpuData cData;
+static __constant__ GpuData cData = {
+    ._warpSize = 32,
+    ._warpBits = 5,
+    ._warpMask = 31
+};
 
 __global__ void
 kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* pValueBuffer,
@@ -185,68 +148,74 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
   __shared__ volatile uint32_t sValue[64 * 4];
 
 
-  printf("Starting ...\n");
-  uint32_t pos                    = (blockIdx.x * blockDim.x + threadIdx.x) >> cData._warpBits;
-  uint32_t tgx                    = threadIdx.x & cData._warpMask;
+//  printf("Starting ... [");
+//
+//  for(int i =0; i < 20; i++) {
+//    printf(" %f ", pOutputBuffer[i]);
+//  }
+//
+//  printf(" ]\n");
 
-  if (pos < batch)
-  {
-    printf("Got past past < batch ...\n");
-    NNFloat *pOutput            = pOutputBuffer + pos * width;
-    uint32_t offset             = threadIdx.x >> cData._warpBits;
-    volatile NNFloat* psKey     = &sKey[64 * offset];
-    volatile uint32_t* psValue  = &sValue[64 * offset];
+//  printf("cData warpmask: %d, _warpSize: %d, _warpBits: %d\n", cData._warpMask, cData._warpSize,
+//         cData._warpBits);
+
+  uint32_t pos = (blockIdx.x * blockDim.x + threadIdx.x) >> cData._warpBits;
+  uint32_t tgx = threadIdx.x & cData._warpMask;
+
+  if (pos < batch) {
+    printf("pos:  %d, tgx: %d, batch: %d, width: %d, product: %d\n", pos, tgx, batch, width, pos * width);
+    NNFloat *pOutput = pOutputBuffer + pos * width;
+    uint32_t offset = threadIdx.x >> cData._warpBits;
+    volatile NNFloat* psKey = &sKey[64 * offset];
+    volatile uint32_t* psValue = &sValue[64 * offset];
 
     // Initialize values to
-    NNFloat k0                  = -MAX_VALUE;
-    NNFloat k1                  = -MAX_VALUE;
-    uint32_t v0                 = 0;
-    uint32_t v1                 = 0;
+    NNFloat k0 = -MAX_VALUE;
+    NNFloat k1 = -MAX_VALUE;
+    uint32_t v0 = 0;
+    uint32_t v1 = 0;
 
     // Read first 32 elements into registers
-    uint32_t wpos               = tgx;
-    if (wpos < width)
-    {
-      k0                      = pOutput[wpos];
-      v0                      = wpos;
+    uint32_t wpos = tgx;
+    //printf("before: wpos:  %d, k0: %d, k1: %d, v0: %d, v1: %d\n", wpos, k0, k1, v0, v1);
+    if (wpos < width) {
+      k0 = pOutput[wpos];
+      v0 = wpos;
     }
-    wpos                       += cData._warpSize;
+    wpos += cData._warpSize;
+    //printf("after: wpos:  %d, k0: %d, k1: %d, v0: %d, v1: %d\n", wpos, k0, k1, v0, v1);
 
     // Run through remainder of data
-    NNFloat minValue            = -MAX_VALUE;
-    uint32_t rpos               = 32;
-    uint32_t bufferSize         = 0;
+    NNFloat minValue = -MAX_VALUE;
+    uint32_t rpos = 32;
+    uint32_t bufferSize = 0;
     NNFloat key1, key2;
     uint32_t value1, value2;
     uint32_t otgx;
     bool flag;
-    while (rpos < width)
-    {
-      printf("loop ...\n");
+    while (rpos < width) {
+      //printf("loop ...\n");
       // Read block of data
-      unsigned wpos           = rpos + tgx;
-      NNFloat key             = -MAX_VALUE;
-      uint32_t value          = wpos;
-      if (wpos < width)
-      {
-        key                 = pOutput[wpos];
+      unsigned wpos = rpos + tgx;
+      NNFloat key = -MAX_VALUE;
+      uint32_t value = wpos;
+      if (wpos < width) {
+        key = pOutput[wpos];
       }
 
       // Add values > minValue to shared memory buffer
-      uint32_t count          = BALLOT(key > minValue);
-      if (key > minValue)
-      {
-        uint32_t mask       = 0xffffffff >> (32 - tgx);
-        uint32_t offset     = __popc(count & mask);
-        offset             += bufferSize;
-        psKey[offset]       = key;
-        psValue[offset]     = value;
+      uint32_t count = BALLOT(key > minValue);
+      if (key > minValue) {
+        uint32_t mask = 0xffffffff >> (32 - tgx);
+        uint32_t offset = __popc(count & mask);
+        offset += bufferSize;
+        psKey[offset] = key;
+        psValue[offset] = value;
       }
-      bufferSize             += __popc(count);
+      bufferSize += __popc(count);
 
       // Check if buffer is full
-      if (bufferSize >= 32)
-      {
+      if (bufferSize >= 32) {
         // Sort 64 elements
         k1                  = psKey[tgx];
         v1                  = psValue[tgx];
@@ -255,8 +224,7 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
 
         // Shift members in shared memory to beginning
         bufferSize         -= 32;
-        if (tgx < bufferSize)
-        {
+        if (tgx < bufferSize) {
           psKey[tgx]      = psKey[tgx + 32];
           psValue[tgx]    = psValue[tgx + 32];
         }
@@ -267,15 +235,13 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
     }
 
     // Do final sort if buffer has any remaining data
-    if ((bufferSize > 0) || (width <= 32))
-    {
+    if ((bufferSize > 0) || (width <= 32)) {
       // Store sentinel values in registers
       k1                       = -MAX_VALUE;
       v1                       = 0;
 
       // Load last block of unsorted data into registers
-      if (tgx < bufferSize)
-      {
+      if (tgx < bufferSize) {
         k1                   = psKey[tgx];
         v1                   = psValue[tgx];
       }
@@ -286,13 +252,17 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
     NNFloat* pKey                = pKeyBuffer + pos * k;
     uint32_t* pValue             = pValueBuffer + pos * k;
     wpos                         = tgx;
-    if (wpos < k)
-    {
+    if (wpos < k) {
       pKey[wpos]               = k0;
       pValue[wpos]             = v0;
     }
     wpos                        += cData._warpSize;
   }
+}
+
+static __always_inline int fls(int x)
+{
+  return x ? sizeof(x) * 8 - __builtin_clz(x) : 0;
 }
 
 void kCalculateTopK(NNFloat* pOutput, NNFloat *pKey, uint32_t* pValue, uint32_t batch, uint32_t width, uint32_t k)
@@ -350,7 +320,8 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   std::cout<<"target_shape is: "<<target_shape<<std::endl;
   std::cout<<"src.shape_ is: "<<src.shape_<<std::endl;
-  std::cout<<"batch_size is: "<<batch_size<<std::endl;
+  std::cout<<"param batch_size is: "<<batch_size<<std::endl;
+  std::cout<<"element_num is: "<<element_num<<std::endl;
   //  Tensor<gpu, 3, real_t> dat = src.FlatTo3D<gpu, real_t>(axis, axis, s);
   size_t temp_size = mxnet::op::SortByKeyWorkspaceSize<int, int, gpu>(src.Size());
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, real_t, gpu>(src.Size()));
@@ -392,9 +363,9 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   // kCalculateTopK(NNFloat* pOutput, NNFloat *pKey, uint32_t* pValue, uint32_t batch, uint32_t
   // width, uint32_t k)
   // Pass in ret[0] as first argument.
-  kCalculateTopK(reinterpret_cast<NNFloat*>(sorted_dat.dptr_),
+  kCalculateTopK(sorted_dat.dptr_,
                  values.dptr_,
-                 reinterpret_cast<uint32_t*>(indices.dptr_), 32, 32, 5);
+                 reinterpret_cast<uint32_t*>(indices.dptr_), 8, 150000, 5);
 
 //  mxnet::op::SortByKey(sorted_dat, indices, is_ascend, &temp_workspace);
 
@@ -438,6 +409,7 @@ void FastTopKGpu(const nnvm::NodeAttrs& attrs,
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   // TODO(sxjscience) We can support inplace in the future
   CHECK_EQ(req[0], kWriteTo) << "TopK does not support inplace";
+  std::cout<<"inputs size: "<<inputs.size()<<std::endl;
   FastTopKImplGpu(ctx.run_ctx.get_stream<gpu>(), ctx.requested[0], inputs[0], outputs, param);
 }
 
