@@ -18,7 +18,6 @@
 from mxnet.test_utils import *
 import random
 import warnings
-from nose.plugins.attrib import attr
 
 
 def is_scalar(var):
@@ -157,8 +156,6 @@ def all_zero(var):
     return 0
 
 
-# This test takes over a minute to run, moving to nightly builds.
-@attr('nightly')
 def test_elemwise_binary_ops():
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
@@ -692,8 +689,6 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
-# This test takes several minutes to run.
-@attr('nightly')
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1158,7 +1153,6 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
-@attr('nightly')
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1459,8 +1453,6 @@ def test_sparse_square_sum():
                                            atol=1e-2, rtol=0.1)
 
 
-# This test takes several minutes to run, marking as nightly.
-@attr('nightly')
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1558,6 +1550,7 @@ def test_sparse_elementwise_sum():
     for dim in range(2, 4):
         shape = tuple(np.random.randint(5, 10, size=dim))
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
+
 
 def test_sparse_embedding():
     ''' test sparse embedding op on cpu '''
