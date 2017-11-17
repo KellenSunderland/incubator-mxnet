@@ -163,7 +163,6 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
   uint32_t tgx = threadIdx.x & cData._warpMask;
 
   if (pos < batch) {
-    printf("pos:  %d, tgx: %d, batch: %d, width: %d, product: %d\n", pos, tgx, batch, width, pos * width);
     NNFloat *pOutput = pOutputBuffer + pos * width;
     uint32_t offset = threadIdx.x >> cData._warpBits;
     volatile NNFloat* psKey = &sKey[64 * offset];
@@ -177,13 +176,13 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
 
     // Read first 32 elements into registers
     uint32_t wpos = tgx;
-    //printf("before: wpos:  %d, k0: %d, k1: %d, v0: %d, v1: %d\n", wpos, k0, k1, v0, v1);
+//    printf("start - pos:  %d, tgx: %d, batch: %d, width: %d, wpos: %d\n", pos, tgx, batch, width,
+//           wpos );
     if (wpos < width) {
       k0 = pOutput[wpos];
       v0 = wpos;
     }
     wpos += cData._warpSize;
-    //printf("after: wpos:  %d, k0: %d, k1: %d, v0: %d, v1: %d\n", wpos, k0, k1, v0, v1);
 
     // Run through remainder of data
     NNFloat minValue = -MAX_VALUE;
@@ -232,6 +231,11 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
 
       // Advance to next block of data
       rpos                    += cData._warpSize;
+
+      if (rpos >= width) {
+//        printf("end - pos:  %d, tgx: %d, batch: %d, width: %d, wpos: %d\n", pos, tgx, batch,
+//               width,  wpos );
+      }
     }
 
     // Do final sort if buffer has any remaining data
@@ -255,7 +259,9 @@ kCalculateTopK_32_kernel(NNFloat* pOutputBuffer, NNFloat* pKeyBuffer, uint32_t* 
     if (wpos < k) {
       pKey[wpos]               = k0;
       pValue[wpos]             = v0;
+      printf("writing to global - pos:  %d, wpos: %d, k0: %f, v0: %d\n", pos, wpos, k0, v0);
     }
+
     wpos                        += cData._warpSize;
   }
 }
@@ -269,7 +275,7 @@ void kCalculateTopK(NNFloat* pOutput, NNFloat *pKey, uint32_t* pValue, uint32_t 
 {
   uint32_t blocks = (batch + 3) / 4;
   if (k <= 32) {
-    std::cout<<"Launching some stuff"<<std::endl;
+    std::cout<<"Launching "<<blocks<<" blocks"<<std::endl;
     kCalculateTopK_32_kernel<<<blocks, 128>>>(pOutput, pKey, pValue, batch, width, k);
     LAUNCHERROR_BLOCKING("kCalculateTopK_32_kernel");
   }
@@ -301,8 +307,8 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
     CHECK_EQ(ret_ele.type_flag_, src.type_flag_);
   }
 
-  std::cout<<"ret 0 shape: "<<ret[0].shape_<<std::endl;
-  std::cout<<"ret 1 shape: "<<ret[1].shape_<<std::endl;
+//  std::cout<<"ret 0 shape: "<<ret[0].shape_<<std::endl;
+//  std::cout<<"ret 1 shape: "<<ret[1].shape_<<std::endl;
 
   // 1. Parse and initialize information
   Tensor<gpu, 1, char> workspace;
@@ -318,18 +324,18 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
-  std::cout<<"target_shape is: "<<target_shape<<std::endl;
-  std::cout<<"src.shape_ is: "<<src.shape_<<std::endl;
-  std::cout<<"param batch_size is: "<<batch_size<<std::endl;
-  std::cout<<"element_num is: "<<element_num<<std::endl;
+//  std::cout<<"target_shape is: "<<target_shape<<std::endl;
+//  std::cout<<"src.shape_ is: "<<src.shape_<<std::endl;
+//  std::cout<<"param batch_size is: "<<batch_size<<std::endl;
+//  std::cout<<"element_num is: "<<element_num<<std::endl;
   //  Tensor<gpu, 3, real_t> dat = src.FlatTo3D<gpu, real_t>(axis, axis, s);
   size_t temp_size = mxnet::op::SortByKeyWorkspaceSize<int, int, gpu>(src.Size());
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, real_t, gpu>(src.Size()));
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<real_t, int, gpu>(src.Size()));
-  std::cout<<"temp_size is: "<<temp_size<<std::endl;
+//  std::cout<<"temp_size is: "<<temp_size<<std::endl;
   size_t workspace_size = temp_size + sizeof(real_t) * src.Size() + sizeof(int) * src.Size()
       * 2 + sizeof(NNFloat) * src.Size();  // TODO: K sized?
-  std::cout<<"workspace_size is: "<<workspace_size<<std::endl;
+//  std::cout<<"workspace_size is: "<<workspace_size<<std::endl;
   workspace = resource.get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<gpu, 1, real_t>(reinterpret_cast<real_t*>(workspace_curr_ptr),
@@ -341,12 +347,13 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   batch_id = Tensor<gpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
                                  Shape1(src.Size()), s);  // batch id in the original matrix
   workspace_curr_ptr += sizeof(int) * src.Size();
-  values = Tensor<gpu, 1, NNFloat>(reinterpret_cast<NNFloat*>(workspace_curr_ptr), Shape1(src.Size()), s);
+  values = Tensor<gpu, 1, NNFloat>(reinterpret_cast<NNFloat*>(workspace_curr_ptr),
+                                   Shape1(src.Size()), s);
   workspace_curr_ptr += sizeof(NNFloat) * src.Size();
 
 
   sorted_dat = src.FlatTo1D<gpu, real_t>(s);
-  std::cout<<"Reshaped data size: "<<sorted_dat.shape_<<std::endl;
+//  std::cout<<"Reshaped data size: "<<sorted_dat.shape_<<std::endl;
   mxnet_op::Kernel<range_fwd, gpu>::Launch(s, batch_size * element_num, 1, 0, 1,
                                            kWriteTo, indices.dptr_);
 
@@ -365,7 +372,7 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   // Pass in ret[0] as first argument.
   kCalculateTopK(sorted_dat.dptr_,
                  values.dptr_,
-                 reinterpret_cast<uint32_t*>(indices.dptr_), 8, 150000, 5);
+                 reinterpret_cast<uint32_t*>(indices.dptr_), 32, 30000, 5);
 
 //  mxnet::op::SortByKey(sorted_dat, indices, is_ascend, &temp_workspace);
 
@@ -381,7 +388,7 @@ void FastTopKImplGpu(mshadow::Stream<gpu>* s,
   //mxnet::op::SortByKey(batch_id, indices, true, &temp_workspace);
   // 3. Assign results to the ret blob
 
-  std::cout<<"We are quite happy"<<std::endl;
+//  std::cout<<"We are quite happy"<<std::endl;
   if (param.ret_typ == topk_enum::kReturnIndices) {
     indices -= batch_id * element_num;
     Tensor<gpu, 2, real_t> ret_indices =
@@ -409,7 +416,7 @@ void FastTopKGpu(const nnvm::NodeAttrs& attrs,
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   // TODO(sxjscience) We can support inplace in the future
   CHECK_EQ(req[0], kWriteTo) << "TopK does not support inplace";
-  std::cout<<"inputs size: "<<inputs.size()<<std::endl;
+//  std::cout<<"inputs size: "<<inputs.size()<<std::endl;
   FastTopKImplGpu(ctx.run_ctx.get_stream<gpu>(), ctx.requested[0], inputs[0], outputs, param);
 }
 
