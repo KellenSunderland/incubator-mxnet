@@ -10,3 +10,7 @@ COPY install/ubuntu_install_r.sh /install/
 RUN /install/ubuntu_install_r.sh
 COPY install/ubuntu_install_perl.sh /install/
 RUN /install/ubuntu_install_perl.sh
+
+# Explicitly reference the cuda stubs in order to build w/o nvidia-docker on non-gpu hosts.
+# Ensure this is the last folder searched at link time so that when building w/ nvidia-docker we use the correct libs.
+ENV LIBRARY_PATH /usr/local/cuda/:$LIBRARY_PATH:/usr/local/cuda/targets/x86_64-linux/lib/stubs/
