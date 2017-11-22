@@ -25,7 +25,8 @@ from nose.plugins.attrib import attr
 
 
 class TestLoss:
-    _multiprocess_can_split_ = True
+    # Tests are well multi-threaded and run faster without multi-process mode.
+    _multiprocess_can_split_ = False
 
     @attr('cpu')
     @attr('gpu')
