@@ -51,11 +51,6 @@ class Storage {
      * \brief Context information about device and ID.
      */
     Context ctx;
-    /*!
-     * \brief Id for IPC shared memory
-     */
-    int shared_pid{-1};
-    int shared_id{-1};
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.
@@ -63,23 +58,7 @@ class Storage {
    * \param ctx Context information about the device and ID.
    * \return Handle struct.
    */
-  Handle Alloc(size_t size, Context ctx) {
-    Handle hd;
-    hd.size = size;
-    hd.ctx = ctx;
-    this->Alloc(&hd);
-    return hd;
-  }
-  /*!
-   * \brief Allocate a new contiguous memory for a given size.
-   * \param handle handle initialized with size and ctx
-   */
-  virtual void Alloc(Handle* handle) = 0;
-  /*!
-   * \brief Increase ref counter on shared memory.
-   * \param handle handle to shared memory.
-   */
-  virtual void SharedIncrementRefCount(Handle handle) = 0;
+  virtual Handle Alloc(size_t size, Context ctx) = 0;
   /*!
    * \brief Free storage.
    * \param handle Handle struect.

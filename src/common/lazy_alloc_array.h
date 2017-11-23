@@ -57,6 +57,8 @@ class LazyAllocArray {
   /*! \brief clear all the allocated elements in array */
   inline void Clear();
 
+  void SignalForKill();
+
  private:
   template<typename SyncObject>
   class unique_unlock {
@@ -85,12 +87,12 @@ class LazyAllocArray {
   /*! \brief overflow array of more elements */
   std::vector<std::shared_ptr<TElem> > more_;
   /*! \brief Signal shutdown of array */
-  std::atomic<bool> is_clearing_;
+  std::atomic<bool> exit_now_;
 };
 
 template<typename TElem>
 inline LazyAllocArray<TElem>::LazyAllocArray()
-  : is_clearing_(false) {
+  : exit_now_(false) {
 }
 
 // implementations
@@ -105,7 +107,7 @@ inline std::shared_ptr<TElem> LazyAllocArray<TElem>::Get(int index, FCreate crea
       return ptr;
     } else {
       std::lock_guard<std::mutex> lock(create_mutex_);
-      if (!is_clearing_.load()) {
+      if (!exit_now_.load()) {
         std::shared_ptr<TElem> ptr = head_[idx];
         if (ptr) {
           return ptr;
@@ -116,7 +118,7 @@ inline std::shared_ptr<TElem> LazyAllocArray<TElem>::Get(int index, FCreate crea
     }
   } else {
     std::lock_guard<std::mutex> lock(create_mutex_);
-    if (!is_clearing_.load()) {
+    if (!exit_now_.load()) {
       idx -= kInitSize;
       if (more_.size() <= idx) {
         more_.reserve(idx + 1);
@@ -138,7 +140,7 @@ inline std::shared_ptr<TElem> LazyAllocArray<TElem>::Get(int index, FCreate crea
 template<typename TElem>
 inline void LazyAllocArray<TElem>::Clear() {
   std::unique_lock<std::mutex> lock(create_mutex_);
-  is_clearing_.store(true);
+  exit_now_.store(true);
   // Currently, head_ and more_ never get smaller, so it's safe to
   // iterate them outside of the lock.  The loops should catch
   // any growth which might happen when create_mutex_ is unlocked
@@ -154,8 +156,6 @@ inline void LazyAllocArray<TElem>::Clear() {
     unique_unlock<std::mutex> unlocker(&lock);
     p = std::shared_ptr<TElem>(nullptr);
   }
-  more_.clear();
-  is_clearing_.store(false);
 }
 
 template<typename TElem>
@@ -172,6 +172,12 @@ inline void LazyAllocArray<TElem>::ForEach(FVisit fvisit) {
       fvisit(i + kInitSize, more_[i].get());
     }
   }
+}
+
+template<typename TElem>
+inline void LazyAllocArray<TElem>::SignalForKill() {
+  std::lock_guard<std::mutex> lock(create_mutex_);
+  exit_now_.store(true);
 }
 
 }  // namespace common

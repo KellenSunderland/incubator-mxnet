@@ -45,11 +45,11 @@ class NaiveStorageManager final : public StorageManager {
    * \brief Default destructor.
    */
   ~NaiveStorageManager() = default;
-  void Alloc(Storage::Handle* handle) override;
-  void Free(Storage::Handle handle) override;
+  void* Alloc(size_t size) override;
+  void Free(void* ptr, size_t) override;
 
-  void DirectFree(Storage::Handle handle) override {
-    DeviceStorage::Free(handle.dptr);
+  void DirectFree(void* ptr, size_t size) override {
+    DeviceStorage::Free(ptr);
   }
 
  private:
@@ -57,13 +57,13 @@ class NaiveStorageManager final : public StorageManager {
 };  // class NaiveStorageManager
 
 template <class DeviceStorage>
-void NaiveStorageManager<DeviceStorage>::Alloc(Storage::Handle* handle) {
-  handle->dptr = DeviceStorage::Alloc(handle->size);
+void* NaiveStorageManager<DeviceStorage>::Alloc(size_t size) {
+  return DeviceStorage::Alloc(size);
 }
 
 template <class DeviceStorage>
-void NaiveStorageManager<DeviceStorage>::Free(Storage::Handle handle) {
-  DeviceStorage::Free(handle.dptr);
+void NaiveStorageManager<DeviceStorage>::Free(void* ptr, size_t) {
+  DeviceStorage::Free(ptr);
 }
 
 }  // namespace storage

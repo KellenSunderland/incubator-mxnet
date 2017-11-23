@@ -27,7 +27,6 @@
 #include "./storage_manager.h"
 #include "./naive_storage_manager.h"
 #include "./pooled_storage_manager.h"
-#include "./cpu_shared_storage_manager.h"
 #include "./cpu_device_storage.h"
 #include "./pinned_memory_storage.h"
 #include "../common/cuda_utils.h"
@@ -38,10 +37,9 @@ namespace mxnet {
 // consider change storage as a pure abstract class
 class StorageImpl : public Storage {
  public:
-  void Alloc(Handle* handle) override;
+  Handle Alloc(size_t size, Context ctx) override;
   void Free(Handle handle) override;
   void DirectFree(Handle handle) override;
-  void SharedIncrementRefCount(Handle handle) override;
   StorageImpl() {}
   virtual ~StorageImpl() = default;
 
@@ -54,13 +52,12 @@ class StorageImpl : public Storage {
 
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
-      case Context::kCPU:
-      case Context::kCPUShared: break;
+      case Context::kCPU: break;
       case Context::kGPU:
       case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
           if (num_gpu_device > 0) {
-            CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
+            CUDA_CALL(cudaSetDevice(ctx.dev_id));
           }
 #endif  // MXNET_USE_CUDA
           break;
@@ -77,19 +74,18 @@ class StorageImpl : public Storage {
 int StorageImpl::num_gpu_device = 0;
 #endif  // MXNET_USE_CUDA
 
-void StorageImpl::Alloc(Storage::Handle* handle) {
+Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
   // space already recycled, ignore request
-  auto&& device = storage_managers_.at(handle->ctx.dev_type);
+  Handle hd;
+  hd.ctx = ctx;
+  hd.size = size;
+  auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
-      handle->ctx.real_dev_id(), [handle]() {
+      ctx.dev_id, [ctx]() {
         storage::StorageManager *ptr = nullptr;
-        switch (handle->ctx.dev_type) {
+        switch (ctx.dev_type) {
           case Context::kCPU: {
             ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
-            break;
-          }
-          case Context::kCPUShared: {
-            ptr = new storage::CPUSharedStorageManager();
             break;
           }
           case Context::kCPUPinned: {
@@ -119,47 +115,38 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 #endif  // MXNET_USE_CUDA
             break;
           }
-          default: LOG(FATAL) <<  "Unimplemented device " << handle->ctx.dev_type;
+          default: LOG(FATAL) <<  "Unimplemented device " << ctx.dev_type;
         }
         return ptr;
       });
-
-  this->ActivateDevice(handle->ctx);
-  manager->Alloc(handle);
+  this->ActivateDevice(ctx);
+  hd.dptr = manager->Alloc(size);
+  return hd;
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
-      ctx.real_dev_id(), []() {
+      ctx.dev_id, []() {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
   this->ActivateDevice(ctx);
-  manager->Free(handle);
+  manager->Free(handle.dptr, handle.size);
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
-      ctx.real_dev_id(), []() {
+      ctx.dev_id, []() {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
   this->ActivateDevice(ctx);
-  manager->DirectFree(handle);
-}
-
-void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
-  CHECK_EQ(handle.ctx.dev_type, Context::kCPUShared);
-  auto&& device = storage_managers_.at(Context::kCPUShared);
-  auto manager = device.Get(0, []() {
-      LOG(FATAL) << "Cannot increment ref count before allocating any shared memory.";
-      return nullptr;
-    });
-  dynamic_cast<storage::CPUSharedStorageManager*>(manager.get())->IncrementRefCount(handle);
+  // directly free ths data.
+  manager->DirectFree(handle.dptr, handle.size);
 }
 
 std::shared_ptr<Storage> Storage::_GetSharedRef() {
