@@ -23,6 +23,19 @@ from nose.plugins.attrib import attr
 
 
 class TestLoss:
+
+
+    @staticmethod
+    def get_net(num_hidden, flatten=True):
+        data = mx.symbol.Variable('data')
+        fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
+        act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+        fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
+        act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+        fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
+        return fc3
+
+
     @attr('cpu')
     @attr('gpu')
     def test_loss_ndarray(self):
@@ -54,16 +67,6 @@ class TestLoss:
 
         L = loss(output, label, weighting).asnumpy()
         mx.test_utils.assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
-
-    @staticmethod
-    def get_net(num_hidden, flatten=True):
-        data = mx.symbol.Variable('data')
-        fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
-        act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-        fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
-        act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
-        fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
-        return fc3
 
 
     @attr('cpu')

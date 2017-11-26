@@ -27,6 +27,36 @@ from nose.plugins.attrib import attr
 
 
 class TestGluon:
+    @staticmethod
+    def check_layer_forward(layer, dshape):
+        layer.collect_params().initialize()
+        x = mx.nd.ones(shape=dshape)
+        x.attach_grad()
+        with mx.autograd.record():
+            out = layer(x)
+        out.backward()
+
+        np_out = out.asnumpy()
+        np_dx = x.grad.asnumpy()
+
+        layer.hybridize()
+
+        x = mx.nd.ones(shape=dshape)
+        x.attach_grad()
+        with mx.autograd.record():
+            out = layer(x)
+        out.backward()
+
+        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
+        mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+
+    @staticmethod
+    def check_split_data(x, num_slice, batch_axis, **kwargs):
+        res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
+        assert len(res) == num_slice
+        mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
+                                          x.asnumpy())
+
     @attr('cpu')
     @attr('gpu')
     def test_parameter(self):
@@ -160,29 +190,6 @@ class TestGluon:
         net = Net(smodel)
         net.hybridize()
         assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
-
-    @staticmethod
-    def check_layer_forward(layer, dshape):
-        layer.collect_params().initialize()
-        x = mx.nd.ones(shape=dshape)
-        x.attach_grad()
-        with mx.autograd.record():
-            out = layer(x)
-        out.backward()
-
-        np_out = out.asnumpy()
-        np_dx = x.grad.asnumpy()
-
-        layer.hybridize()
-
-        x = mx.nd.ones(shape=dshape)
-        x.attach_grad()
-        with mx.autograd.record():
-            out = layer(x)
-        out.backward()
-
-        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
-        mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
     @attr('cpu')
     @attr('gpu')
@@ -357,13 +364,6 @@ class TestGluon:
         layer = nn.Conv2D(10, 2)
         layer.collect_params().initialize()
         layer(x)
-
-    @staticmethod
-    def check_split_data(x, num_slice, batch_axis, **kwargs):
-        res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
-        assert len(res) == num_slice
-        mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
-                                          x.asnumpy())
 
     @attr('cpu')
     @attr('gpu')

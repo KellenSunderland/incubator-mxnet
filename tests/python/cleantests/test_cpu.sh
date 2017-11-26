@@ -17,4 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-sh ci_build.sh cpu PYTHONPATH=./python/ nosetests-2.7 --with-timer -a 'cpu' --verbose tests/python/cleantests --processes=8 --process-timeout=6000
+export OPENMP_THREADS=2
+sh ci_build.sh cpu PYTHONPATH=./python/ nosetests-2.7 --with-timer -a 'cpu' --verbose tests/python/cleantests \
+               --processes=8 --process-timeout=6000
