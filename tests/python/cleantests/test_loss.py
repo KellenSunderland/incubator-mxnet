@@ -23,18 +23,15 @@ from nose.plugins.attrib import attr
 
 
 class TestLoss:
-
-
     @staticmethod
     def get_net(num_hidden, flatten=True):
         data = mx.symbol.Variable('data')
         fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
         act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-        fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
+        fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64, flatten=flatten)
         act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
         fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
         return fc3
-
 
     @attr('cpu')
     @attr('gpu')
@@ -63,11 +60,10 @@ class TestLoss:
 
         loss = gluon.loss.SoftmaxCrossEntropyLoss()
         L = loss(output, label).asnumpy()
-        mx.test_utils.assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]))
+        mx.test_utils.assert_almost_equal(L, np.array([2.12692809, 0.04858733]))
 
         L = loss(output, label, weighting).asnumpy()
-        mx.test_utils.assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
-
+        mx.test_utils.assert_almost_equal(L, np.array([1.06346405, 0.04858733]))
 
     @attr('cpu')
     @attr('gpu')
@@ -88,7 +84,6 @@ class TestLoss:
                 eval_metric=mx.metric.Loss(), optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
     @attr('cpu')
     @attr('gpu')
     def test_bce_loss(self):
@@ -108,7 +103,6 @@ class TestLoss:
                 initializer=mx.init.Xavier(magnitude=2))
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
 
-
     @attr('cpu')
     @attr('gpu')
     def test_bce_equal_ce2(self):
@@ -116,10 +110,9 @@ class TestLoss:
         loss1 = gluon.loss.SigmoidBCELoss(from_sigmoid=True)
         loss2 = gluon.loss.SoftmaxCELoss(from_logits=True)
         out1 = mx.random.uniform(0.1, 0.9, shape=(N, 1))
-        out2 = mx.nd.log(mx.nd.concat(1-out1, out1, dim=1) + 1e-8)
+        out2 = mx.nd.log(mx.nd.concat(1 - out1, out1, dim=1) + 1e-8)
         label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
         assert_almost_equal(loss1(out1, label).asnumpy(), loss2(out2, label).asnumpy())
-
 
     @attr('cpu')
     @attr('gpu')
@@ -138,7 +131,6 @@ class TestLoss:
         mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
                 eval_metric=mx.metric.Loss(), optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
-
 
     @attr('cpu')
     @attr('gpu')
@@ -159,7 +151,6 @@ class TestLoss:
                 optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
     @attr('cpu')
     @attr('gpu')
     def test_l1_loss(self):
@@ -179,34 +170,33 @@ class TestLoss:
                 optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
-
     @attr('cpu')
     @attr('gpu')
     def test_ctc_loss(self):
         loss = gluon.loss.CTCLoss()
-        l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
+        l = loss(mx.nd.ones((2, 20, 4)), mx.nd.array([[1, 0, -1, -1], [2, 1, 1, -1]]))
         mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
         loss = gluon.loss.CTCLoss(layout='TNC')
-        l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
+        l = loss(mx.nd.ones((20, 2, 4)), mx.nd.array([[1, 0, -1, -1], [2, 1, 1, -1]]))
         mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
         loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN')
-        l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]).T)
+        l = loss(mx.nd.ones((20, 2, 4)), mx.nd.array([[1, 0, -1, -1], [2, 1, 1, -1]]).T)
         mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
         loss = gluon.loss.CTCLoss()
-        l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,2,2],[3,2,2,2]]), None, mx.nd.array([2,3]))
+        l = loss(mx.nd.ones((2, 20, 4)), mx.nd.array([[2, 1, 2, 2], [3, 2, 2, 2]]), None, mx.nd.array([2, 3]))
         mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
         loss = gluon.loss.CTCLoss()
-        l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]), mx.nd.array([20,20]))
+        l = loss(mx.nd.ones((2, 25, 4)), mx.nd.array([[2, 1, -1, -1], [3, 2, 2, -1]]), mx.nd.array([20, 20]))
         mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
         loss = gluon.loss.CTCLoss()
-        l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
+        l = loss(mx.nd.ones((2, 25, 4)), mx.nd.array([[2, 1, 3, 3], [3, 2, 2, 3]]), mx.nd.array([20, 20]),
+                 mx.nd.array([2, 3]))
         mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
-
 
     @attr('cpu')
     @attr('gpu')
@@ -226,7 +216,6 @@ class TestLoss:
                 initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
                 optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
-
 
     @attr('cpu')
     @attr('gpu')
@@ -248,12 +237,11 @@ class TestLoss:
         mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
                 eval_metric=mx.metric.Loss(), optimizer='adam')
         data_iter = mx.io.NDArrayIter(data[10:], {'label': label, 'w': weight}, batch_size=10)
-        score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+        score = mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
         assert score > 1
         data_iter = mx.io.NDArrayIter(data[:10], {'label': label, 'w': weight}, batch_size=10)
-        score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+        score = mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
         assert score < 0.05
-
 
     @attr('cpu')
     @attr('gpu')
@@ -280,7 +268,6 @@ class TestLoss:
                 eval_metric=mx.metric.Loss())
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
     @attr('cpu')
     @attr('gpu')
     def test_huber_loss(self):
@@ -299,7 +286,6 @@ class TestLoss:
                 initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
                 optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
-
 
     @attr('cpu')
     @attr('gpu')
@@ -320,7 +306,6 @@ class TestLoss:
                 optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
     @attr('cpu')
     @attr('gpu')
     def test_squared_hinge_loss(self):
@@ -340,7 +325,6 @@ class TestLoss:
                 optimizer='adam')
         assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
     @attr('cpu')
     @attr('gpu')
     def test_triplet_loss(self):
@@ -357,7 +341,7 @@ class TestLoss:
         Loss = gluon.loss.TripletLoss()
         loss = Loss(output, pos, neg)
         loss = mx.sym.make_loss(loss)
-        mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos','neg'))
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos', 'neg'))
         mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
                 initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
                 optimizer='adam')
@@ -366,4 +350,5 @@ class TestLoss:
 
 if __name__ == '__main__':
     import nose
+
     nose.runmodule()
