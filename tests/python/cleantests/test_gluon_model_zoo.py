@@ -21,13 +21,9 @@ from mxnet.gluon import nn
 from mxnet.gluon.model_zoo.custom_layers import HybridConcurrent, Identity
 from mxnet.gluon.model_zoo.vision import get_model
 from nose.plugins.attrib import attr
-import sys
 
 
 class TestGluonModelZoo:
-    def _eprint(*args, **kwargs):
-        print(*args, file=sys.stderr, **kwargs)
-
     @attr('cpu')
     def test_concurrent(self):
         model = HybridConcurrent(concat_dim=1)
@@ -53,6 +49,7 @@ class TestGluonModelZoo:
         mx.test_utils.assert_almost_equal(model(x).asnumpy(),
                                           x.asnumpy())
 
+    # TODO(kellens) make these paramaterized tests.
     @attr('cpu')
     def test_models(self):
         all_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
@@ -69,8 +66,6 @@ class TestGluonModelZoo:
             test_pretrain = model_name in pretrained_to_test
             model = get_model(model_name, pretrained=test_pretrain, root='model/')
             data_shape = (2, 3, 224, 224) if 'inception' not in model_name else (2, 3, 299, 299)
-            self._eprint('testing forward for %s' % model_name)
-            print(model)
             if not test_pretrain:
                 model.collect_params().initialize()
             model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()

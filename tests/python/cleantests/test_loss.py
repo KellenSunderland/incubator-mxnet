@@ -22,12 +22,9 @@ from mxnet.test_utils import assert_almost_equal, default_context
 from nose.plugins.attrib import attr
 
 
-# Tests are well multi-threaded and run faster without multi-process mode.
-# Tests should run in both cpu and gpu contexts.
 class TestLoss:
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_loss_ndarray(self):
         output = mx.nd.array([1, 2, 3, 4])
         label = mx.nd.array([1, 3, 5, 7])
@@ -58,7 +55,8 @@ class TestLoss:
         L = loss(output, label, weighting).asnumpy()
         mx.test_utils.assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
 
-    def get_net(self, num_hidden, flatten=True):
+    @staticmethod
+    def get_net(num_hidden, flatten=True):
         data = mx.symbol.Variable('data')
         fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
         act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
@@ -70,7 +68,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_ce_loss(self):
         np.random.seed(1234)
         nclass = 10
@@ -91,7 +88,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_bce_loss(self):
         np.random.seed(1234)
         N = 20
@@ -112,7 +108,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_bce_equal_ce2(self):
         N = 100
         loss1 = gluon.loss.SigmoidBCELoss(from_sigmoid=True)
@@ -125,7 +120,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_kl_loss(self):
         np.random.seed(1234)
         N = 20
@@ -145,7 +139,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_l2_loss(self):
         np.random.seed(1234)
         N = 20
@@ -166,7 +159,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_l1_loss(self):
         np.random.seed(1234)
         N = 20
@@ -187,7 +179,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_ctc_loss(self):
         loss = gluon.loss.CTCLoss()
         l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
@@ -216,7 +207,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_ctc_loss_train(self):
         np.random.seed(1234)
         N = 20
@@ -237,7 +227,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_sample_weight_loss(self):
         np.random.seed(1234)
         nclass = 10
@@ -265,7 +254,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_saveload(self):
         mx.random.seed(1234)
         np.random.seed(1234)
@@ -292,7 +280,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_huber_loss(self):
         np.random.seed(1234)
         N = 20
@@ -313,7 +300,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_hinge_loss(self):
         np.random.seed(1234)
         N = 20
@@ -334,7 +320,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_squared_hinge_loss(self):
         np.random.seed(1234)
         N = 20
@@ -355,7 +340,6 @@ class TestLoss:
 
     @attr('cpu')
     @attr('gpu')
-    @attr('multithreaded')
     def test_triplet_loss(self):
         np.random.seed(1234)
         N = 20

@@ -15,20 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import nose
 import mxnet as mx
+from nose.plugins.attrib import attr
 
-def test_bulk():
-    with mx.engine.bulk(10):
-        x = mx.nd.ones((10,))
-        x *= 2
-        x += 1
-        x.wait_to_read()
-        x += 1
-        assert (x.asnumpy() == 4).all()
-        for i in range(100):
+
+class TestEngine:
+    @attr('cpu')
+    def test_bulk(self):
+        with mx.engine.bulk(10):
+            x = mx.nd.ones((10,))
+            x *= 2
             x += 1
-    assert (x.asnumpy() == 104).all()
+            x.wait_to_read()
+            x += 1
+            assert (x.asnumpy() == 4).all()
+            for i in range(100):
+                x += 1
+        assert (x.asnumpy() == 104).all()
 
 
 if __name__ == '__main__':
