@@ -15,8 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from mxnet.test_utils import *
-from sparse_common import *
+from .sparse_common import *
 import random
 import warnings
 from nose.plugins.attrib import attr

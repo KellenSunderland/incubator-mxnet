@@ -30,11 +30,6 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
 from test_random import *
-from test_gluon import *
-from test_loss import *
-#from test_rnn import *
-from test_gluon_rnn import *
-from test_sparse_operator import *
 from test_ndarray import *
 
 set_default_context(mx.gpu(0))
