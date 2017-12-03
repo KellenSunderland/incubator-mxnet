@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
 import mxnet as mx
 import numpy as np
 from nose.plugins.attrib import attr
@@ -193,8 +192,7 @@ class TestRandom:
                     for check_name, check_func, tol in symbdic['checks']:
                         assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
-
-    @attr('nightly')
+    # TODO(kellens) make paramaterized
     @attr('gpu')
     @attr('cpu')
     def test_random(self):

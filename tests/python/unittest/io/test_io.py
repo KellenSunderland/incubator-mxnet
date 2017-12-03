@@ -19,7 +19,7 @@
 from mxnet.test_utils import *
 import numpy as np
 import os
-from get_data import *
+from .get_data import *
 
 try:
     import h5py
