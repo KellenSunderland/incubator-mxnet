@@ -18,8 +18,8 @@
 import mxnet as mx
 from mxnet import gluon
 import numpy as np
-from numpy.testing import assert_allclose
 from nose.plugins.attrib import attr
+from numpy.testing import assert_allclose
 
 
 class TestGluonRnn:
