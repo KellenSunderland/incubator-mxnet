@@ -19,9 +19,11 @@
 import numpy as np
 import mxnet as mx
 from numpy.testing import assert_allclose
+from nose.plugins.attrib import attr
 
 
 class TestRTC:
+    @attr('gpu')
     def test_basic_rtc(self):
         x = mx.nd.zeros((10,), ctx=mx.gpu(0))
         x[:] = 1
@@ -33,6 +35,35 @@ class TestRTC:
             y[threadIdx.x] = expf(s_rec[threadIdx.x]*5.0);""")
         rtc.push([x], [y], (1, 1, 1), (10, 1, 1))
         assert_allclose(y.asnumpy(), np.exp(x.asnumpy() * 5.0))
+
+    @attr('gpu')
+    def test_cuda_rtc(self):
+        source = r'''
+        extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
+            int i = threadIdx.x + blockIdx.x * blockDim.x;
+            y[i] += alpha * x[i];
+        }
+
+        extern "C" __global__ void saxpy(const float *x, float *y, float alpha) {
+            extern __shared__ float smem[];
+            int i = threadIdx.x + blockIdx.x * blockDim.x;
+            smem[threadIdx.x] = x[i];
+            y[i] += alpha * smem[threadIdx.x];
+        }
+        '''
+        module = mx.rtc.CudaModule(source)
+        axpy = module.get_kernel("axpy", "const float *x, float *y, float alpha")
+        x = mx.nd.ones((10,), ctx=mx.gpu(0))
+        y = mx.nd.zeros((10,), ctx=mx.gpu(0))
+        axpy.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+        assert (y.asnumpy() == 3).all()
+
+        saxpy = module.get_kernel("saxpy", "const float *x, float *y, float alpha")
+        saxpy.launch([x, y, 4.0], mx.gpu(0), (1, 1, 1), (10, 1, 1), 10)
+        assert (y.asnumpy() == 7).all()
+
+        saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
+        assert (y.asnumpy() == 12).all()
 
 
 if __name__ == '__main__':
