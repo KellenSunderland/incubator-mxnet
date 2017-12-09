@@ -23,7 +23,6 @@
  */
 // this will be invoked by gcc and compile CPU version
 #include "./ordering_op-inl.h"
-#include "./elemwise_unary_op.h"
 
 
 namespace mxnet {
