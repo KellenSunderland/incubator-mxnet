@@ -28,6 +28,7 @@
 #include <string>
 #include <mutex>
 #include <memory>
+#include "nvToolsExt.h"
 
 namespace mxnet {
 namespace engine {
@@ -57,6 +58,9 @@ struct OprExecStat {
   uint32_t dev_type;
   /*! \brief device id */
   uint32_t dev_id;
+
+  /*! \id used to start and stop nvtx ranges */
+  nvtxRangeId_t nvtx_range_id;
 };
 
 /*!

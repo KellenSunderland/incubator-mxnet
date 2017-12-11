@@ -219,6 +219,7 @@ void SetOprStart(OprExecStat* opr_stat) {
     LOG(WARNING) << "SetOpStart: nullptr";
     return;
   }
+  opr_stat->nvtx_range_id = nvtxRangeStartA(opr_stat->opr_name);
   opr_stat->opr_start_rel_micros = NowInUsec() - Profiler::Get()->GetInitTime();
 }
 
@@ -227,6 +228,7 @@ void SetOprEnd(OprExecStat* opr_stat) {
     LOG(WARNING) << "SetOpEnd: nullptr";
     return;
   }
+  nvtxRangeEnd(opr_stat->nvtx_range_id);
   opr_stat->opr_end_rel_micros   = NowInUsec() - Profiler::Get()->GetInitTime();
 }
 

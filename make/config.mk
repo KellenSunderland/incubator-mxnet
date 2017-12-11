@@ -31,13 +31,13 @@ DEV = 0
 DEBUG = 0
 
 # whether compile with profiler
-USE_PROFILER =
+USE_PROFILER = 1
 
 # whether to turn on signal handler (e.g. segfault logger)
 USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
-ADD_LDFLAGS =
+ADD_LDFLAGS = -lnvToolsExt
 
 # the additional compile flags you want to add
 ADD_CFLAGS =
@@ -47,20 +47,20 @@ ADD_CFLAGS =
 #---------------------------------------------
 
 # whether use CUDA during compile
-USE_CUDA = 0
+USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
-# USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = NONE
+USE_CUDA_PATH = /usr/local/cuda
+#USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
-USE_CUDNN = 0
+USE_CUDNN = 1
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
-USE_OPENCV = 1
+USE_OPENCV = 0
 
 #whether use libjpeg-turbo for image decode without OpenCV wrapper
 USE_LIBJPEG_TURBO = 0
@@ -92,11 +92,7 @@ USE_NNPACK = 0
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
 UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S), Darwin)
-USE_BLAS = apple
-else
-USE_BLAS = atlas
-endif
+USE_BLAS = openblas
 
 # whether use lapack during compilation
 # only effective when compiled with blas versions openblas/apple/atlas/mkl
