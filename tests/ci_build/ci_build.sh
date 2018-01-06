@@ -101,6 +101,11 @@ function upsearch () {
 # reasonable defaults if you run it outside of Jenkins.
 WORKSPACE="${WORKSPACE:-${SCRIPT_DIR}/../../}"
 
+# Set up a default WORKDIR, unless otherwise specified.
+if [[ -z "${WORKDIR}" ]]; then
+    WORKDIR="/workspace"
+fi
+
 # Determine the docker image name
 DOCKER_IMG_NAME="mx-ci.${CONTAINER_TYPE}"
 
@@ -121,6 +126,7 @@ fi
 
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
+echo "WORKDIR: ${WORKDIR}"
 echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
 echo "COMMAND: ${COMMAND[@]}"
 echo "CONTAINER_TYPE: ${CONTAINER_TYPE}"
@@ -155,7 +161,7 @@ echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
 
 ${DOCKER_BINARY} run --rm --pid=host \
     -v ${WORKSPACE}:/workspace \
-    -w /workspace \
+    -w ${WORKDIR} \
     -e "CI_BUILD_HOME=${WORKSPACE}" \
     -e "CI_BUILD_USER=$(id -u -n)" \
     -e "CI_BUILD_UID=$(id -u)" \
