@@ -69,19 +69,19 @@ def make(docker_type, make_flag) {
 // Run cmake. First try to do an incremental build from a previous workspace in hope to
 // accelerate the compilation. If something wrong, clean the workspace and then
 // build from scratch.
-def cmake(docker_type, cmake_defines) {
+def cmake(docker_type, cmake_defines, make_flags) {
   timeout(time: max_time, unit: 'MINUTES') {
     try {
       sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
       sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
-      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make -j ${nproc}"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
     } catch (exc) {
       echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
       sh "${docker_run} ${docker_type} --dockerbinary docker sudo make clean"
       sh "${docker_run} ${docker_type} --dockerbinary docker sudo make -C amalgamation/ clean"
       sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
       sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
-      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make -j ${nproc}"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
     }
   }
 }
@@ -210,9 +210,12 @@ try {
         ws('workspace/build-cmake-cpu') {
           init_git()
           def defines = """ \
-            -DUSE_CUDA=0                  \
+            -DUSE_CUDA=0    \
             """
-          cmake("cpu", defines)
+            def flag = """  \
+            -j\$(nproc)
+            """
+          cmake("cpu", defines, flag)
           pack_lib('cmake_cpu')
         }
       }
