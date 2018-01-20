@@ -1,0 +1,45 @@
+# -*- mode: dockerfile -*-
+# dockerfile to build libmxnet.so for armv7
+
+FROM nvidia/cuda:9.0-cudnn7-devel as cudabuilder
+
+FROM dockcross/linux-armv7
+
+RUN apt-get update && \
+    apt-get install -y libopenblas-dev:armhf && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ARCH armv71
+ENV CC /usr/bin/arm-linux-gnueabihf-gcc
+ENV CXX /usr/bin/arm-linux-gnueabihf-g++
+ENV NVCCFLAGS "-m32"
+ENV BUILD_OPTS "USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda"
+
+COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
+COPY --from=cudabuilder /usr/include/cudnn.h /usr/include/cudnn.h
+
+ENV PATH $PATH:/usr/local/cuda/bin
+
+# Build MXNet
+
+WORKDIR /work
+ADD https://api.github.com/repos/apache/incubator-mxnet/git/refs/heads/master mxnet_version.json
+RUN git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+
+WORKDIR /work/mxnet
+
+# Add Jetson specific settings, mostly preventing linking against x86 cuda code
+ADD arm.crosscompile.mk make/config.mk
+ADD Makefile.jetson Makefile
+ADD mshadow.mk.jetson mshadow/make/mshadow.mk
+
+# Build and link
+RUN make -j$(nproc) $BUILD_OPTS
+
+# Copy build artifacts
+WORKDIR /work/build/
+RUN cp -r /work/mxnet/build /work/build
+
+# Create a python wheel for python2 and 3 usable on Jetsons
+WORKDIR /work/build/python
+RUN python setup.py bdist_wheel --universal
