@@ -34,7 +34,7 @@ USE_PROFILER =
 
 # the additional link flags you want to add
 # TODO: Move flags here
-ADD_LDFLAGS=-static-libstdc++
+ADD_LDFLAGS=-static-libstdc++ -L/usr/local/cuda-8.0/targets/aarch64-linux/lib/
 
 # the additional compile flags you want to add
 ADD_CFLAGS =

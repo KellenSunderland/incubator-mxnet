@@ -1,45 +1,54 @@
 # -*- mode: dockerfile -*-
 # dockerfile to build libmxnet.so for armv7
 
-FROM nvidia/cuda:9.0-cudnn7-devel as cudabuilder
+FROM nvidia/cuda:8.0-cudnn5-devel as cudabuilder
 
-FROM dockcross/linux-armv7
+FROM dockcross/linux-arm64
 
-RUN apt-get update && \
-    apt-get install -y libopenblas-dev:armhf && \
-    rm -rf /var/lib/apt/lists/*
+ENV ARCH aarch64
+ENV NVCCFLAGS "-m64"
+ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"
+ENV BUILD_OPTS "USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda-8.0/targets/aarch64-linux/"
+ENV CC /usr/bin/aarch64-linux-gnu-gcc
+ENV CXX /usr/bin/aarch64-linux-gnu-g++
+ENV FC /usr/bin/aarch64-linux-gnu-gfortran-4.9
+ENV HOSTCC gcc
 
-ENV ARCH armv71
-ENV CC /usr/bin/arm-linux-gnueabihf-gcc
-ENV CXX /usr/bin/arm-linux-gnueabihf-g++
-ENV NVCCFLAGS "-m32"
-ENV BUILD_OPTS "USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda"
+WORKDIR /work
+
+# Build OpenBLAS
+ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/heads/master /tmp/openblas_version.json
+RUN git clone https://github.com/xianyi/OpenBLAS.git && \
+    cd OpenBLAS && \
+    make -j$(nproc) TARGET=ARMV8 && \
+    make install && \
+    ln -s /opt/OpenBLAS/lib/libopenblas.so /usr/lib/libopenblas.so && \
+    ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/libopenblas.a && \
+    ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/liblapack.a
+
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/opt/OpenBLAS/lib
+ENV CPLUS_INCLUDE_PATH /opt/OpenBLAS/include
 
 COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
 COPY --from=cudabuilder /usr/include/cudnn.h /usr/include/cudnn.h
-
 ENV PATH $PATH:/usr/local/cuda/bin
+ENV TARGET_ARCH aarch64
+ENV TARGET_OS linux
 
 # Build MXNet
-
-WORKDIR /work
 ADD https://api.github.com/repos/apache/incubator-mxnet/git/refs/heads/master mxnet_version.json
 RUN git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 
-WORKDIR /work/mxnet
+RUN wget http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/006/linux-x64/cuda-repo-l4t-8-0-local_8.0.34-1_arm64.deb && \
+    dpkg -i cuda-repo-l4t-8-0-local_8.0.34-1_arm64.deb && \
+    apt update -y && \
+    apt install cuda-cudart-cross-aarch64-8-0 cuda-cublas-cross-aarch64-8-0 cuda-nvml-cross-aarch64-8-0 cuda-nvrtc-cross-aarch64-8-0 -y && \
+    apt install cuda-cufft-cross-aarch64-8-0 cuda-curand-cross-aarch64-8-0 cuda-cusolver-cross-aarch64-8-0 cuda-cusparse-cross-aarch64-8-0 -y && \
+    apt install cuda-misc-headers-cross-aarch64-8-0 cuda-npp-cross-aarch64-8-0 -y
 
+WORKDIR /work/mxnet
 # Add Jetson specific settings, mostly preventing linking against x86 cuda code
 ADD arm.crosscompile.mk make/config.mk
-ADD Makefile.jetson Makefile
-ADD mshadow.mk.jetson mshadow/make/mshadow.mk
 
 # Build and link
 RUN make -j$(nproc) $BUILD_OPTS
-
-# Copy build artifacts
-WORKDIR /work/build/
-RUN cp -r /work/mxnet/build /work/build
-
-# Create a python wheel for python2 and 3 usable on Jetsons
-WORKDIR /work/build/python
-RUN python setup.py bdist_wheel --universal
