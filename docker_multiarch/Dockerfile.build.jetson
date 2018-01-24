@@ -35,8 +35,9 @@ ENV TARGET_ARCH aarch64
 ENV TARGET_OS linux
 
 # Build MXNet
-ADD https://api.github.com/repos/apache/incubator-mxnet/git/refs/heads/master mxnet_version.json
-RUN git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+#ADD https://api.github.com/repos/apache/incubator-mxnet/git/refs/heads/master mxnet_version.json
+#RUN git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+ADD mxnet mxnet
 
 # Install ARM depedencies based on Jetpack 3.1
 RUN wget http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/013/linux-x64/cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && \
