@@ -46,7 +46,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
            "multiply", "not_equal", "onehot_encode", "power", "subtract", "true_divide",
-           "waitall", "_new_empty_handle"]
+           "waitall", "_new_empty_handle", "range_start", "range_end"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -3242,6 +3242,19 @@ def lesser_equal(lhs, rhs):
         _internal._lesser_equal_scalar,
         _internal._greater_equal_scalar)
     # pylint: enable= no-member, protected-access
+
+
+def range_start(range_name):
+    range_name = ctypes.c_char_p(range_name.encode('utf-8'))
+    id = ctypes.c_int()
+    from _ctypes import byref
+    result = _LIB.MXRangeStart(range_name, byref(id))
+    check_call(result)
+    return id
+
+
+def range_end(id):
+    check_call(_LIB.MXRangeEnd(id))
 
 
 def true_divide(lhs, rhs):

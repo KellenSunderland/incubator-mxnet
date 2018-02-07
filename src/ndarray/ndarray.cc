@@ -40,6 +40,8 @@
 #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
 
+#include "nvToolsExt.h"
+
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 }  // namespace dmlc
@@ -65,6 +67,7 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 }
 
 NDArray NDArray::Reshape(const TShape &shape) const {
+  auto id = nvtxRangeStartA("Reshape");
   CHECK(!is_none()) << "NDArray is not initialized";
   auto stype = storage_type();
   // reshape is not supported for non-default ndarray with dismatching shapes
@@ -74,10 +77,12 @@ NDArray NDArray::Reshape(const TShape &shape) const {
     << "NDArray.Reshape: target shape size is larger current shape";
   NDArray ret = this->Detach();
   ret.shape_ = shape;
+  nvtxRangeEnd(id);
   return ret;
 }
 
 NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
+  auto id = nvtxRangeStartA("ReshapeWithRecord");
   NDArray ret = this->Reshape(shape);
   if (!Imperative::Get()->is_recording()) return ret;
 
@@ -92,11 +97,13 @@ NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
   Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  nvtxRangeEnd(id);
   return ret;
 }
 
 
 NDArray NDArray::Slice(index_t begin, index_t end) const {
+  auto id = nvtxRangeStartA("Slice");
   CHECK(!is_none()) << "NDArray is empty";
   CHECK_LE(begin, end)
       << "Invalid slicing range [" << begin << ", " << end << ")";
@@ -108,10 +115,13 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
     ret.byte_offset_ += begin * length * sizeof(DType);
   });
   ret.shape_[0] = end - begin;
+  nvtxRangeEnd(id);
   return ret;
 }
 
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
+
+  auto id = nvtxRangeStartA("SliceWithRecord");
   NDArray ret = this->Slice(begin, end);
   if (!Imperative::Get()->is_recording()) return ret;
   // fake a slice_axis op
@@ -123,16 +133,21 @@ NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
   Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  nvtxRangeEnd(id);
   return ret;
 }
 
 NDArray NDArray::At(index_t idx) const {
+  auto id = nvtxRangeStartA("At");
   CHECK(storage_type() == kDefaultStorage) << "Storage type "
                                            << storage_type() << " doesn't support At()";
   NDArray ret = this->Slice(idx, idx+1);
   if (shape_.ndim() > 1) {
-    return ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+    auto result = ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+    nvtxRangeEnd(id);
+    return result;
   } else {
+    nvtxRangeEnd(id);
     return ret;
   }
 }

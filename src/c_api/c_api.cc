@@ -46,6 +46,7 @@
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../engine/profiler.h"
+#include "nvToolsExt.h"
 
 using namespace mxnet;
 
@@ -361,6 +362,22 @@ int MXNDArrayLoad(const char* fname,
 int MXNDArrayFree(NDArrayHandle handle) {
   API_BEGIN();
   delete static_cast<NDArray*>(handle);
+  API_END();
+}
+
+int MXRangeStart(char* name, int* id) {
+  API_BEGIN();
+  //printf("Start: %s\n", name);
+  auto range_id = nvtxRangePushA(name);
+  //printf("Start id: %d\n", static_cast<int>(range_id));
+  *id = static_cast<int>(range_id);
+  API_END();
+}
+
+int MXRangeEnd(int id) {
+  API_BEGIN();
+  //printf("End: %d\n", id);
+  nvtxRangePop();
   API_END();
 }
 
