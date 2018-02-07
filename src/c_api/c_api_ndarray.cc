@@ -36,6 +36,7 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"
+#include "nvToolsExt.h"
 
 using namespace mxnet;
 
@@ -86,6 +87,8 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
                             const char **param_keys,
                             const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
+  std::string op_name = "Imp_" + op->name;
+  auto id = nvtxRangeStartA(op_name.c_str());
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
@@ -112,6 +115,7 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
     for (int i = 0; i < *num_outputs; ++i) ret->ret_handles.push_back(ndoutputs[i]);
     *outputs = reinterpret_cast<NDArrayHandle*>(dmlc::BeginPtr(ret->ret_handles));
   }
+  nvtxRangeEnd(id);
 }
 
 int MXImperativeInvoke(AtomicSymbolCreator creator,
