@@ -438,6 +438,10 @@ MXNET_DLL int MXNDArrayWaitToWrite(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayWaitAll();
+
+MXNET_DLL int MXRangeStart(char* name, int* id);
+MXNET_DLL int MXRangeEnd(int id);
+
 /*!
  * \brief free the narray handle
  * \param handle the handle to be freed
