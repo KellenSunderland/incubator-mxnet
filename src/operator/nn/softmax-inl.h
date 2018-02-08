@@ -162,7 +162,7 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
 template<typename OP, typename DType, int ndim>
 inline void Softmax(Stream<gpu> *s, DType *in, DType *out,
                     Shape<ndim> shape, int axis) {
-  const int x_bits = 7;
+  const int x_bits = 6;
   const int x_size = 1 << x_bits;
   index_t M = shape[axis];
   index_t N = shape.Size()/M;
