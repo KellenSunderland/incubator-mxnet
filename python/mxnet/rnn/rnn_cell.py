@@ -26,6 +26,7 @@ import warnings
 import functools
 
 import numpy as np
+import os
 
 from .. import symbol, init, ndarray
 from ..base import string_types, numeric_types
@@ -425,11 +426,19 @@ class LSTMCell(BaseRNNCell):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._num_hidden = num_hidden
-        self._iW = self.params.get('i2h_weight_float16')
-        self._hW = self.params.get('h2h_weight_float16')
-        # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
-        self._iB = self.params.get('i2h_bias_float16', init=init.LSTMBias(forget_bias=forget_bias))
-        self._hB = self.params.get('h2h_bias_float16')
+
+        if os.getenv("USE_FP16_LSTM") is not None:
+            self._iW = self.params.get('i2h_weight_float16')
+            self._hW = self.params.get('h2h_weight_float16')
+            # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
+            self._iB = self.params.get('i2h_bias_float16', init=init.LSTMBias(forget_bias=forget_bias))
+            self._hB = self.params.get('h2h_bias_float16')
+        else:
+            self._iW = self.params.get('i2h_weight')
+            self._hW = self.params.get('h2h_weight')
+            # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
+            self._iB = self.params.get('i2h_bias', init=init.LSTMBias(forget_bias=forget_bias))
+            self._hB = self.params.get('h2h_bias')
 
     @property
     def state_info(self):
@@ -443,16 +452,19 @@ class LSTMCell(BaseRNNCell):
     def __call__(self, inputs, states):
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        inputs = symbol.cast(inputs, dtype=np.float16)
+        if os.getenv("USE_FP16_LSTM") is not None:
+            inputs = symbol.cast(inputs, dtype=np.float16)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
                                     num_hidden=self._num_hidden*4,
                                     name='%si2h'%name)
-        states[0] = symbol.cast(states[0], dtype=np.float16)
+        if os.getenv("USE_FP16_LSTM") is not None:
+            states[0] = symbol.cast(states[0], dtype=np.float16)
         h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
                                     num_hidden=self._num_hidden*4,
                                     name='%sh2h'%name)
-        i2h = symbol.cast(i2h, dtype=np.float32)
-        h2h = symbol.cast(h2h, dtype=np.float32)
+        if os.getenv("USE_FP16_LSTM") is not None:
+            i2h = symbol.cast(i2h, dtype=np.float32)
+            h2h = symbol.cast(h2h, dtype=np.float32)
         gates = i2h + h2h
         slice_gates = symbol.SliceChannel(gates, num_outputs=4,
                                           name="%sslice"%name)
