@@ -70,3 +70,23 @@ RUN python setup.py  bdist_wheel --universal
 
 # Copy build artifacts to output folder for tool.py script
 RUN mkdir -p /work/build & cp dist/*.whl /work/build && cp ../lib/* /work/build
+
+# Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the root
+# of the wheel, then repackage the wheel.
+# Create a temp dir to do the work.
+WORKDIR /work/build
+RUN apt-get install -y unzip && \
+    mkdir temp && \
+    cp *.whl temp
+
+# Extract the wheel, move the libmxnet.so file, repackage the wheel.
+WORKDIR /work/build/temp
+RUN unzip *.whl &&  \
+    rm *.whl && \
+    mv *.data/data/mxnet/libmxnet.so . && \
+    zip -r ../temp.zip *
+
+# Replace the existing wheel with our fixed version.
+WORKDIR /work/build
+RUN rm -rf temp && \
+    for f in *.whl; do rm "$f" && mv temp.zip "$f"; done
