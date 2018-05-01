@@ -214,22 +214,22 @@ class Symbol {
                     std::map<std::string, NDArray> *args_map,
                     const std::map<std::string, NDArray> &known_args) const;
   /*!
-  * \brief Create an executor by bind symbol with context and arguments.
-  *  If user do not want to compute the gradients of i-th argument,
+  * \brief Create an executor by binding a symbol to a context with arguments.
+  *  If the user does not want to compute the gradients of the i-th argument,
   *grad_req_type[i] can be kNullOp.
-  *  The input arrays in the given maps should have the same name with the input
+  *  The input arrays in the given maps should have the same name as the input
   *symbol.
-  *  Only need some of the necessary arrays, and the other arrays can be infered
+  *  Only need some of the necessary arrays, and the other arrays can be inferred
   *automatically.
   *
   * \param context the context of binding.
   * \param args_map the NDArray that stores the input arguments to the symbol.
   * \param arg_grad_store NDArray that is used to store the gradient output of
   *the input arguments.
-  * \param grad_req_type requirment type of gradient saving. Can only be in
+  * \param grad_req_type requirement type of gradient saving. Can only be in
   *{kNullOp, kAddTo, kWriteTo}.
   * \param aux_map NDArray that stores the internal state in op
-  * \return a new executor, which need to be free manually.
+  * \return a new executor, which needs to be manually freed.
   */
   Executor *SimpleBind(const Context &context,
                        const std::map<std::string, NDArray> &args_map,
@@ -240,22 +240,22 @@ class Symbol {
                        const std::map<std::string, NDArray> &aux_map =
                            std::map<std::string, NDArray>());
   /*!
-  * \brief Create an executor by bind symbol with context and arguments.
-  *  If user do not want to compute the gradients of i-th argument,
+  * \brief Create an executor by binding a symbol to a context with arguments.
+  *  If the user does not want to compute the gradients of the i-th argument,
   *grad_req_type[i] can be kNullOp.
   *
   * \param context the context of binding.
   * \param arg_arrays the NDArray that stores the input arguments to the symbol.
   * \param grad_arrays NDArray that is used to store the gradient output of the
   *input arguments.
-  * \param grad_reqs requirment type of gradient saving. Can only be in
+  * \param grad_reqs requirement type of gradient saving. Can only be in
   *{kNullOp, kAddTo, kWriteTo}.
   * \param aux_arrays NDArray that is used as internal state in op
   * \param group_to_ctx dict of string to mx.Context
   * \param shared_exec Executor to share memory with. This is intended for
-  *runtime reshaping, variable length sequencesn etc.  The returned executor
+  *runtime reshaping, variable length sequences etc.  The returned executor
   *shares state with shared_exec, and should not be used in parallel with it.
-  * \return a new executor, which need to be free manually.
+  * \return a new executor, which needs to be manually freed.
   */
   Executor *Bind(const Context &context, const std::vector<NDArray> &arg_arrays,
                  const std::vector<NDArray> &grad_arrays,
