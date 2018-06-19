@@ -69,3 +69,10 @@ ENV CPLUS_INCLUDE_PATH /work/deps/OpenBLAS
 WORKDIR /work/build
 
 COPY runtime_functions.sh /work/
+
+# We use TINI as an entrypoint so that signals are properly passed, and so that child processes
+# are properly terminated.
+ENV TINI_VERSION v0.18.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]

@@ -42,3 +42,10 @@ RUN /work/deb_ubuntu_ccache.sh
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/build
+
+# We use TINI as an entrypoint so that signals are properly passed, and so that child processes
+# are properly terminated.
+ENV TINI_VERSION v0.18.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
