@@ -22,23 +22,40 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
+
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
-// timeout in minutes
-max_time = 120
+
+// timeout for unit tests in minutes
+unittest_timeout = 120
+
+// timeout for builds in minutes
+build_timeout = 60
+
+// timeout for packing artifacts
+pack_timeout = 60
+
+// Number of times to retry build actions
+build_retry_count = 3
+
+// Number of times to retry git actions
+git_retry_count = 5
+
 // assign any caught errors here
 err = null
 
 // initialize source codes
 def init_git() {
   deleteDir()
-  retry(5) {
+  retry(git_retry_count) {
     try {
       // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
       // retries as this will increase the amount of requests and worsen the throttling
@@ -57,7 +74,7 @@ def init_git() {
 
 def init_git_win() {
   deleteDir()
-  retry(5) {
+  retry(git_retry_count) {
     try {
       // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
       // retries as this will increase the amount of requests and worsen the throttling
@@ -74,13 +91,30 @@ def init_git_win() {
   }
 }
 
+// build different platforms, handling timeouts by retrying build
+def build_with_retry(build_platform, build_command_name) {
+  retry(build_retry_count) {
+    try {
+      timeout(time: build_timeout, unit: 'MINUTES') {
+        init_git()
+        docker_run(build_platform, build_command_name, false)
+      }
+    } catch (exc) {
+        error "Build timed out, retrying ..."
+        sleep 5
+    }
+  }
+}
+
 // pack libraries for later use
 def pack_lib(name, libs=mx_lib) {
-  sh """
-echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-"""
-  stash includes: libs, name: name
+  timeout(time: pack_timeout, unit: 'MINUTES') {
+    sh """
+  echo "Packing ${libs} into ${name}"
+  echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+  """
+    stash includes: libs, name: name
+  }
 }
 
 // unpack libraries saved before
@@ -119,20 +153,20 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 // Python unittest for CPU
 // Python 2
 def python2_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
+  timeout(time: unittest_timeout, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu', false)
   }
 }
 
 // Python 3
 def python3_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
+  timeout(time: unittest_timeout, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu', false)
   }
 }
 
 def python3_ut_mkldnn(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
+  timeout(time: unittest_timeout, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
   }
 }
@@ -141,14 +175,14 @@ def python3_ut_mkldnn(docker_container_name) {
 // both CPU and GPU
 // Python 2
 def python2_gpu_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
+  timeout(time: unittest_timeout, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python2_gpu', true)
   }
 }
 
 // Python 3
 def python3_gpu_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
+  timeout(time: unittest_timeout, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu', true)
   }
 }
@@ -167,149 +201,110 @@ try {
     parallel 'CPU: CentOS 7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            pack_lib('centos7_cpu')
-          }
+          build_with_retry('centos7_cpu', 'build_centos7_cpu')
+          pack_lib('centos7_cpu')
         }
       }
     },
     'CPU: CentOS 7 MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-mkldnn') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            pack_lib('centos7_mkldnn')
-          }
+          build_with_retry('centos7_cpu', 'build_centos7_mkldnn')
+          pack_lib('centos7_mkldnn')
         }
       }
     },
     'GPU: CentOS 7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('centos7_gpu', 'build_centos7_gpu', false)
-            pack_lib('centos7_gpu')
-          }
+          build_with_retry('centos7_gpu', 'build_centos7_gpu')
+          pack_lib('centos7_gpu')
         }
       }
     },
     'CPU: Openblas': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-openblas') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            pack_lib('cpu', mx_dist_lib)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_cpu_openblas')
+          pack_lib('cpu', mx_dist_lib)
         }
       }
     },
     'CPU: Clang 3.9': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-clang39') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39', false)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_cpu_clang39')
         }
       }
     },
     'CPU: Clang 5': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-clang50') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50', false)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_cpu_clang50')
         }
       }
     },
     'CPU: Clang 3.9 MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-mkldnn-clang39') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn', false)
-            pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn')
+          pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
         }
       }
     },
     'CPU: Clang 5 MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-mkldnn-clang50') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50_mkldnn', false)
-            pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_cpu_clang50_mkldnn')
+          pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
         }
       }
     },
     'CPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
-            pack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn')
+          pack_lib('mkldnn_cpu', mx_mkldnn_lib)
         }
       }
     },
     'GPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
-            pack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          }
+          build_with_retry('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn')
+          pack_lib('mkldnn_gpu', mx_mkldnn_lib)
         }
       }
     },
     'GPU: CUDA9.1+cuDNN7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-            pack_lib('gpu', mx_dist_lib)
-            stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
-            stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
-            stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
-            stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
-            stash includes: 'build/cpp-package/example/resnet', name: 'cpp_resnet'
-            stash includes: 'build/cpp-package/example/mlp', name: 'cpp_mlp'
-            stash includes: 'build/cpp-package/example/mlp_cpu', name: 'cpp_mlp_cpu'
-            stash includes: 'build/cpp-package/example/mlp_gpu', name: 'cpp_mlp_gpu'
-            stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
-            stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
-          }
+          build_with_retry('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7')
+          pack_lib('gpu', mx_dist_lib)
+          stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
+          stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
+          stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
+          stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
+          stash includes: 'build/cpp-package/example/resnet', name: 'cpp_resnet'
+          stash includes: 'build/cpp-package/example/mlp', name: 'cpp_mlp'
+          stash includes: 'build/cpp-package/example/mlp_cpu', name: 'cpp_mlp_cpu'
+          stash includes: 'build/cpp-package/example/mlp_gpu', name: 'cpp_mlp_gpu'
+          stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+          stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
       }
     },
     'Amalgamation MIN': {
       node('mxnetlinux-cpu') {
         ws('workspace/amalgamationmin') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_amalgamation_min', false)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_amalgamation_min')
         }
       }
     },
     'Amalgamation': {
       node('mxnetlinux-cpu') {
         ws('workspace/amalgamation') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_amalgamation', false)
-          }
+          build_with_retry('ubuntu_cpu', 'build_ubuntu_amalgamation')
         }
       }
     },
@@ -317,28 +312,22 @@ try {
     'GPU: CMake MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cmake-mkldnn-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn', false)
-            pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
-          }
+          build_with_retry('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn')
+          pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
         }
       }
     },
     'GPU: CMake': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cmake-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake', false)
-            pack_lib('cmake_gpu', mx_cmake_lib)
-          }
+          build_with_retry('ubuntu_gpu', 'build_ubuntu_gpu_cmake')
+          pack_lib('cmake_gpu', mx_cmake_lib)
         }
       }
     },
     'Build CPU windows':{
       node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/build-cpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
               init_git_win()
@@ -372,7 +361,7 @@ try {
     //Todo: Set specific CUDA_ARCh for windows builds in cmake
     'Build GPU windows':{
       node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/build-gpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
             init_git_win()
@@ -404,7 +393,7 @@ try {
     },
     'Build GPU MKLDNN windows':{
       node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/build-gpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
             init_git_win()
@@ -446,27 +435,21 @@ try {
     'NVidia Jetson / ARMv8':{
       node('mxnetlinux-cpu') {
         ws('workspace/build-jetson-armv8') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('jetson', 'build_jetson', false)
-          }
+          build_with_retry('jetson', 'build_jetson')
         }
       }
     },
     'Raspberry / ARMv7':{
       node('mxnetlinux-cpu') {
         ws('workspace/build-raspberry-armv7') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('armv7', 'build_armv7', false)
-          }
+          build_with_retry('armv7', 'build_armv7')
         }
       }
     },
     'Raspberry / ARMv6':{
       node('mxnetlinux-cpu') {
         ws('workspace/build-raspberry-armv6') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             docker_run('armv6', 'build_armv6', false)
           }
@@ -476,7 +459,7 @@ try {
     'Android / ARM64':{
       node('mxnetlinux-cpu') {
         ws('workspace/android64') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             docker_run('android_arm64', 'build_android_arm64', false)
           }
@@ -544,7 +527,7 @@ try {
     'Python2: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
         ws('workspace/ut-python2-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             try {
               init_git()
               unpack_lib('gpu', mx_lib)
@@ -559,7 +542,7 @@ try {
     'Python3: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
         ws('workspace/ut-python3-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             try {
               init_git()
               unpack_lib('gpu', mx_lib)
@@ -629,7 +612,7 @@ try {
     'Python3: CentOS 7 CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             try {
               init_git()
               unpack_lib('centos7_cpu')
@@ -645,7 +628,7 @@ try {
     'Python3: CentOS 7 GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/build-centos7-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             try {
               init_git()
               unpack_lib('centos7_gpu')
@@ -660,7 +643,7 @@ try {
     'Scala: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-scala-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('cpu', mx_dist_lib)
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
@@ -671,7 +654,7 @@ try {
     'Scala: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu', mx_dist_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
@@ -682,7 +665,7 @@ try {
     'Perl: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-perl-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
@@ -693,7 +676,7 @@ try {
     'Perl: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-perl-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
@@ -704,7 +687,7 @@ try {
     'Cpp: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-cpp-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('cmake_gpu', mx_cmake_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
@@ -715,7 +698,7 @@ try {
     'Cpp: MKLDNN+GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-cpp-mkldnn-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
@@ -726,7 +709,7 @@ try {
     'R: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-r-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
@@ -737,7 +720,7 @@ try {
     'R: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-r-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
@@ -748,7 +731,7 @@ try {
 
     'Python 2: CPU Win':{
       node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/ut-python-cpu') {
             try {
               init_git_win()
@@ -771,7 +754,7 @@ try {
     },
     'Python 3: CPU Win': {
       node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/ut-python-cpu') {
             try {
               init_git_win()
@@ -794,7 +777,7 @@ try {
     },
     'Python 2: GPU Win':{
       node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
@@ -817,7 +800,7 @@ try {
     },
     'Python 3: GPU Win':{
       node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
@@ -840,7 +823,7 @@ try {
     },
     'Python 3: MKLDNN-GPU Win':{
       node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
@@ -867,7 +850,7 @@ try {
     parallel 'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx', false)
@@ -878,7 +861,7 @@ try {
     'Python GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-python-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_python', true)
@@ -889,7 +872,7 @@ try {
     'Caffe GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-caffe') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
@@ -900,7 +883,7 @@ try {
     'cpp-package GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-cpp-package') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
             unstash 'cpp_lenet'
@@ -921,7 +904,7 @@ try {
     'dist-kvstore tests GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-dist-kvstore') {
-          timeout(time: max_time, unit: 'MINUTES') {
+          timeout(time: unittest_timeout, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
@@ -934,7 +917,7 @@ try {
   stage('Deploy') {
     node('mxnetlinux-cpu') {
       ws('workspace/docs') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: unittest_timeout, unit: 'MINUTES') {
           init_git()
           docker_run('ubuntu_cpu', 'deploy_docs', false)
           sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
