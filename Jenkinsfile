@@ -124,6 +124,9 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   command = command.replaceAll('%SHARED_MEM%', shared_mem)
 
   sh command
+
+  // Cleanup untagged docker images after a build
+  docker rmi $(docker images -f "dangling=true" -q)
 }
 
 // Python unittest for CPU
