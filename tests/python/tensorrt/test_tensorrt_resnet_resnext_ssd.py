@@ -27,17 +27,22 @@ from mxnet.gluon.data.vision import transforms
 from mxnet import gluon
 from time import time
 
+
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
+
 
 def set_use_tensorrt(status=False):
     os.environ["MXNET_USE_TENSORRT"] = str(int(status))
 
+
 def get_fp16_infer_for_fp16_graph():
     return int(os.environ.get("MXNET_TENSORRT_USE_FP16_FOR_FP32", 0))
 
+
 def set_fp16_infer_for_fp16_graph(status=False):
     os.environ["MXNET_TENSORRT_USE_FP16_FOR_FP32"] = str(int(status))
+
 
 #ssd_512_resnet50_v1_coco
 def get_ssd_model(model_name='ssd_512_mobilenet1_0_coco', use_tensorrt=True,
@@ -84,6 +89,7 @@ def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True,
     executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,), grad_req='null',
                                    shared_buffer=all_params, force_rebind=True)
     return executor
+
 
 def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorrt=True,
         ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
@@ -138,6 +144,7 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
 
     return duration, 100.0 * matches / example_ct
 
+
 def ssd_infer(model_name='ssd_512_mobilenet1_0_voc', use_tensorrt=True,
         ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
@@ -161,6 +168,7 @@ def ssd_infer(model_name='ssd_512_mobilenet1_0_voc', use_tensorrt=True,
 #            box_preds = all_preds[:, :, 2:]
 
     return time() - start
+
 
 def classif_imagenet_infer(model_name='ssd_512_mobilenet1_0_coco', use_tensorrt=True,
         ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
@@ -187,12 +195,12 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
     print("\n===========================================")
     print("Model: %s" % model_name)
     print("===========================================")
-    print("*** Running inference using pure MxNet ***\n")
+    print("*** Running inference using pure MXNet ***\n")
     mx_duration, mx_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
         num_workers=num_workers, fp16_for_fp32_graph=fp16_for_fp32_graph, use_tensorrt=False)
-    print("\nMxNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
+    print("\nMXNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
 
-    print("\n*** Running inference using MxNet + TensorRT ***\n")
+    print("\n*** Running inference using MXNet + TensorRT ***\n")
     trt_duration, trt_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
         num_workers=num_workers, use_tensorrt=True)
     print("TensorRT: time elapsed: %.3fs, accuracy: %.2f%%" % (trt_duration, trt_pct))
@@ -207,16 +215,16 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
 def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, test_fp16=False):
 
     models = [
-        'cifar_resnet20_v1',
-        'cifar_resnet56_v1',
-        'cifar_resnet110_v1',
-        'cifar_resnet20_v2',
-        'cifar_resnet56_v2',
-        'cifar_resnet110_v2',
-        'cifar_wideresnet16_10',
-        'cifar_wideresnet28_10',
-        'cifar_wideresnet40_8',
-        'cifar_resnext29_16x64d'
+         'cifar_resnet20_v1'
+        # 'cifar_resnet56_v1',
+        # 'cifar_resnet110_v1',
+        # 'cifar_resnet20_v2',
+        # 'cifar_resnet56_v2',
+        # 'cifar_resnet110_v2',
+        # 'cifar_wideresnet16_10',
+        # 'cifar_wideresnet28_10',
+        # 'cifar_wideresnet40_8',
+        # 'cifar_resnext29_16x64d'
     ]
 
     num_models = len(models)
@@ -238,7 +246,7 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, 
             speedup, acc_diff = run_experiment_for(model, batch_size, num_workers, fp16_for_fp32_graph=use_fp16)
             speedups[idx] = speedup
             acc_diffs[idx] = acc_diff
-            assert acc_diff < tolerance, "Accuracy difference between MxNet and TensorRT > %.2f%% for model %s" % (tolerance, model)
+            assert acc_diff < tolerance, "Accuracy difference between MXNet and TensorRT > %.2f%% for model %s" % (tolerance, model)
 
         print("Perf and correctness checks run on the following models:")
         print(models)
@@ -254,6 +262,7 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, 
         test_duration = time() - test_start
 
         print("Test duration: %.2f seconds" % test_duration)
+
 
 if __name__ == '__main__':
     import nose

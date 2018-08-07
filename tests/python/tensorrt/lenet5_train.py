@@ -20,6 +20,7 @@ import numpy as np
 import mxnet as mx
 from lenet5_common import get_iters
 
+
 def lenet5():
     """LeNet-5 Symbol"""
     #pylint: disable=no-member
@@ -43,6 +44,7 @@ def lenet5():
     lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
     #pylint: enable=no-member
     return lenet
+
 
 def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     """train LeNet-5 model on MNIST data"""
@@ -100,6 +102,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     percentage = 100.0 * matches / example_ct
 
     return percentage
+
 
 if __name__ == '__main__':
 
