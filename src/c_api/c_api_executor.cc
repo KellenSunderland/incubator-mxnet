@@ -26,6 +26,7 @@
 #include <mxnet/c_api.h>
 #include <mxnet/executor.h>
 #include "./c_api_common.h"
+#include "../executor/graph_executor.h"
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
@@ -595,6 +596,16 @@ int MXExecutorReshape(int partial_shaping,
     nd_idx = ret->ret_handles.size();
   }
   API_END_HANDLE_ERROR(delete out);
+}
+
+int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
+                                 SymbolHandle *out) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  exec::GraphExecutor *exec = static_cast<exec::GraphExecutor*>(handle);
+  *s = exec->GetOptimizedSymbol();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
 }
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
