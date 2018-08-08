@@ -21,9 +21,10 @@ import mxnet as mx
 import numpy as np
 import os
 
-from mxnet.gluon.data.vision import transforms
 from mxnet import gluon
 from time import time
+
+from mxnet.gluon.data.vision import transforms
 
 
 def get_use_tensorrt():
@@ -40,22 +41,23 @@ def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.
     set_use_tensorrt(use_tensorrt)
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
     data = mx.sym.var('data')
-    out = net(data)
-
-    softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-    all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
-
-    if not get_use_tensorrt():
-        all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
     if use_tensorrt:
+        out = net(data)
+        softmax = mx.sym.SoftmaxOutput(out, name='softmax')
+        all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
         executor = mx.contrib.tensorrt.optimize_graph(softmax, ctx=ctx, data=(batch_size, 3, h, w),
                                                       softmax_label=(batch_size,), grad_req='null',
                                                       shared_buffer=all_params, force_rebind=True)
     else:
-        executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w),
-                                       softmax_label=(batch_size,),
-                                       grad_req='null', shared_buffer=all_params, force_rebind=True)
+        # Convert gluon model to Symbolic
+        net.hybridize()
+        net.forward(mx.ndarray.zeros((batch_size, 3, h, w)))
+        net.export(model_name)
+        symbol, arg_params, aux_params = mx.model.load_checkpoint(model_name, 0)
+        executor = symbol.simple_bind(ctx=ctx, data=(batch_size, 3, h, w),
+                                       softmax_label=(batch_size,))
+        executor.copy_params_from(arg_params, aux_params)
     return executor
 
 
@@ -79,55 +81,32 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
 
     val_data = data_loader()
 
-    if use_tensorrt:
-        for idx, (data, label) in enumerate(val_data):
-            # Skip last batch if it's undersized.
-            if data.shape[0] < batch_size:
-                continue
-            offset = idx * batch_size
-            all_label_test[offset:offset + batch_size] = label.asnumpy()
+    for idx, (data, label) in enumerate(val_data):
+        # Skip last batch if it's undersized.
+        if data.shape[0] < batch_size:
+            continue
+        offset = idx * batch_size
+        all_label_test[offset:offset + batch_size] = label.asnumpy()
 
-            # warm-up, but don't use result
-            executor.arg_dict["data"][:batch_size, :] = data
-            executor.forward(is_train=False)
-            executor.outputs[0].wait_to_read()
-
-    else:
-        for idx, (data, label) in enumerate(val_data):
-            # Skip last batch if it's undersized.
-            if data.shape[0] < batch_size:
-                continue
-            executor.forward(is_train=False, data=data)
-            executor.outputs[0].wait_to_read()
+        # warm-up, but don't use result
+        executor.forward(is_train=False, data=data)
+        executor.outputs[0].wait_to_read()
 
     gc.collect()
-
     val_data = data_loader()
     example_ct = 0
-
     start = time()
 
-    if use_tensorrt:
-        for idx, (data, label) in enumerate(val_data):
-            # Skip last batch if it's undersized.
-            if data.shape[0] < batch_size:
-                continue
-            executor.arg_dict["data"][:batch_size, :] = data
-            executor.forward(is_train=False)
-            preds = executor.outputs[0].asnumpy()
-            offset = idx * batch_size
-            all_preds[offset:offset + batch_size, :] = preds[:batch_size]
-            example_ct += batch_size
-    else:
-        for idx, (data, label) in enumerate(val_data):
-            # Skip last batch if it's undersized.
-            if data.shape[0] < batch_size:
-                continue
-            executor.forward(is_train=False, data=data)
-            preds = executor.outputs[0].asnumpy()
-            offset = idx * batch_size
-            all_preds[offset:offset + batch_size, :] = preds[:batch_size]
-            example_ct += batch_size
+    # if use_tensorrt:
+    for idx, (data, label) in enumerate(val_data):
+        # Skip last batch if it's undersized.
+        if data.shape[0] < batch_size:
+            continue
+        executor.forward(is_train=False, data=data)
+        preds = executor.outputs[0].asnumpy()
+        offset = idx * batch_size
+        all_preds[offset:offset + batch_size, :] = preds[:batch_size]
+        example_ct += batch_size
 
     all_preds = np.argmax(all_preds, axis=1)
     matches = (all_preds[:example_ct] == all_label_test[:example_ct]).sum()
@@ -140,11 +119,11 @@ def run_experiment_for(model_name, batch_size, num_workers):
     print("\n===========================================")
     print("Model: %s" % model_name)
     print("===========================================")
-    print("*** Running inference using pure MxNet ***\n")
+    print("*** Running inference using pure MXNet ***\n")
     mx_duration, mx_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
                                         num_workers=num_workers, use_tensorrt=False)
-    print("\nMxNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
-    print("\n*** Running inference using MxNet + TensorRT ***\n")
+    print("\nMXNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
+    print("\n*** Running inference using MXNet + TensorRT ***\n")
     trt_duration, trt_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
                                           num_workers=num_workers, use_tensorrt=True)
     print("TensorRT: time elapsed: %.3fs, accuracy: %.2f%%" % (trt_duration, trt_pct))
@@ -156,19 +135,18 @@ def run_experiment_for(model_name, batch_size, num_workers):
     return speedup, acc_diff
 
 
-def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=10.0, num_workers=1):
-    # TODO(kellens): fix tolerance, parametrize test with model list.
+def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
     models = [
-        'cifar_resnet20_v1'
-        # 'cifar_resnet56_v1',
-        # 'cifar_resnet110_v1',
-        # 'cifar_resnet20_v2',
-        # 'cifar_resnet56_v2',
-        # 'cifar_resnet110_v2',
-        # 'cifar_wideresnet16_10',
-        # 'cifar_wideresnet28_10',
-        # 'cifar_wideresnet40_8',
-        # 'cifar_resnext29_16x64d'
+        'cifar_resnet20_v1',
+        'cifar_resnet56_v1',
+        'cifar_resnet110_v1',
+        'cifar_resnet20_v2',
+        'cifar_resnet56_v2',
+        'cifar_resnet110_v2',
+        'cifar_wideresnet16_10',
+        'cifar_wideresnet28_10',
+        'cifar_wideresnet40_8',
+        'cifar_resnext29_16x64d'
     ]
 
     num_models = len(models)
@@ -182,7 +160,7 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=10.0, num_workers=1)
         speedup, acc_diff = run_experiment_for(model, batch_size, num_workers)
         speedups[idx] = speedup
         acc_diffs[idx] = acc_diff
-        assert acc_diff < tolerance, "Accuracy difference between MxNet and TensorRT > %.2f%% for model %s" % (
+        assert acc_diff < tolerance, "Accuracy difference between MXNet and TensorRT > %.2f%% for model %s" % (
             tolerance, model)
 
     print("Perf and correctness checks run on the following models:")
