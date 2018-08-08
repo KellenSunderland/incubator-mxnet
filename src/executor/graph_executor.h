@@ -89,24 +89,24 @@ class GraphExecutor : public Executor {
               = nnvm::NodeEntryMap<NDArray>());
 
   // initialize executor for simple bind
-  virtual void Init(nnvm::Symbol symbol,
+  void Init(nnvm::Symbol symbol,
             const Context& default_ctx,
             const std::map<std::string, Context>& ctx_map,
-            std::vector<Context>* in_arg_ctxes,
-            std::vector<Context>* arg_grad_ctxes,
-            std::vector<Context>* aux_state_ctxes,
-            std::unordered_map<std::string, TShape>* arg_shape_map,
-            std::unordered_map<std::string, int>* arg_dtype_map,
-            std::unordered_map<std::string, int>* arg_stype_map,
-            std::vector<OpReqType>* grad_req_types,
-            std::unordered_set<std::string>* shared_arg_names,
+            const std::vector<Context>& in_arg_ctxes,
+            const std::vector<Context>& arg_grad_ctxes,
+            const std::vector<Context>& aux_state_ctxes,
+            const std::unordered_map<std::string, TShape>& arg_shape_map,
+            const std::unordered_map<std::string, int>& arg_dtype_map,
+            const std::unordered_map<std::string, int>& arg_stype_map,
+            const std::vector<OpReqType>& grad_req_types,
+            const std::unordered_set<std::string>& shared_arg_names,
             std::vector<NDArray>* in_arg_vec,
             std::vector<NDArray>* arg_grad_vec,
             std::vector<NDArray>* aux_state_vec,
             std::unordered_map<std::string, NDArray>* shared_buffer = nullptr,
             Executor* shared_exec = nullptr,
             const nnvm::NodeEntryMap<NDArray>& feed_dict
-              = nnvm::NodeEntryMap<NDArray>());
+            = nnvm::NodeEntryMap<NDArray>());
 
   Executor* Reshape(const bool partial_shaping,
                     const bool allow_up_sizing,
@@ -117,8 +117,6 @@ class GraphExecutor : public Executor {
                     std::vector<NDArray>* in_args,
                     std::vector<NDArray>* arg_grads,
                     std::vector<NDArray>* aux_states) override;
-
-  nnvm::Symbol GetOptimizedSymbol();
 
  protected:
   friend class mxnet::Imperative;
@@ -251,17 +249,6 @@ class GraphExecutor : public Executor {
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
 
-  Graph ReinitGraph(Graph&& g, const Context &default_ctx,
-                    const std::map<std::string, Context> &ctx_map,
-                    std::vector<Context>* in_arg_ctxes,
-                    std::vector<Context>* arg_grad_ctxes,
-                    std::vector<Context>* aux_state_ctxes,
-                    std::vector<OpReqType>* grad_req_types,
-                    std::unordered_map<std::string, TShape>* arg_shape_map,
-                    std::unordered_map<std::string, int>* arg_dtype_map,
-                    std::unordered_map<std::string, int>* arg_stype_map,
-                    std::unordered_map<std::string, NDArray> *params_map);
-
   // internal graph
   nnvm::Graph graph_;
   // operator node
@@ -303,8 +290,6 @@ class GraphExecutor : public Executor {
   std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
-  // use TensorRT optimization pass for inference
-  bool use_tensorrt_ = false;
 };
 
 }  // namespace exec

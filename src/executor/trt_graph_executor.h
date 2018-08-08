@@ -20,6 +20,8 @@
 #ifndef MXNET_EXECUTOR_TRT_GRAPH_EXECUTOR_H_
 #define MXNET_EXECUTOR_TRT_GRAPH_EXECUTOR_H_
 
+#if MXNET_USE_TENSORRT
+
 #include <map>
 #include <string>
 #include <vector>
@@ -84,5 +86,6 @@ class TrtGraphExecutor : public GraphExecutor {
 }  // namespace exec
 }  // namespace mxnet
 
+#endif  // MXNET_USE_TENSORRT
 
 #endif  // MXNET_EXECUTOR_TRT_GRAPH_EXECUTOR_H_

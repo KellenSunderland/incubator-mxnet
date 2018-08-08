@@ -17,14 +17,14 @@
  * under the License.
  */
 
+#if MXNET_USE_TENSORRT
+
 #include "trt_graph_executor.h"
 
-#if MXNET_USE_TENSORRT
 #include <onnx/onnx.pb.h>
 #include <NvInfer.h>
 #include "./onnx_to_tensorrt.h"
 #include "../operator/contrib/tensorrt-inl.h"
-#endif  // MNET_USE_TENSORRT
 
 namespace mxnet {
 namespace exec {
@@ -444,3 +444,5 @@ Executor *Executor::TensorRTBind(nnvm::Symbol symbol,
 }
 
 }  // namespace mxnet
+
+#endif  // MXNET_USE_TENSORRT
