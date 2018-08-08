@@ -938,15 +938,19 @@ int MXExecutorReshape(int partial_shaping,
   API_END_HANDLE_ERROR(delete out);
 }
 
+#if MXNET_USE_TENSORRT
+
 int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
                                  SymbolHandle *out) {
-  nnvm::Symbol *s = new nnvm::Symbol();
+  auto s = new nnvm::Symbol();
   API_BEGIN();
-  exec::TrtGraphExecutor *exec = static_cast<exec::TrtGraphExecutor*>(handle);
+  auto exec = static_cast<exec::TrtGraphExecutor*>(handle);
   *s = exec->GetOptimizedSymbol();
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }
+
+#endif  // MXNET_USE_TENSORRT
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                  ExecutorMonitorCallback callback,
