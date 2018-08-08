@@ -37,6 +37,7 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
+mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
@@ -183,6 +184,51 @@ if(USE_VTUNE)
   include_directories(${VTUNE_ROOT}/include)
   list(APPEND mxnet_LINKER_LIBS ${VTUNE_ROOT}/lib64/libittnotify.a)
   list(APPEND mxnet_LINKER_LIBS dl)
+endif()
+
+if(USE_TENSORRT)
+  message(STATUS "Using TensorRT")
+  set(ONNX_PATH 3rdparty/onnx-tensorrt/third_party/onnx/build/)
+  set(ONNX_TRT_PATH 3rdparty/onnx-tensorrt/build/)
+
+  include_directories(${ONNX_PATH})
+  include_directories(3rdparty/onnx-tensorrt/)
+  include_directories(3rdparty/)
+  add_definitions(-DMXNET_USE_TENSORRT=1)
+  add_definitions(-DONNX_NAMESPACE=onnx)
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so)
+
+  find_package(Protobuf REQUIRED)
+  list(APPEND mxnet_LINKER_LIBS ${PROTOBUF_LIBRARY})
+
+  message(STATUS "target path ${ONNX_PATH}")
+  find_library(ONNX_LIBRARY NAMES libonnx.so REQUIRED
+          PATHS ${ONNX_PATH}
+          DOC "Path to onnx library.")
+  message(STATUS "linking onnx ${ONNX_LIBRARY}")
+  list(APPEND mxnet_LINKER_LIBS ${ONNX_LIBRARY})
+
+  message(STATUS "target path ${ONNX_PATH}")
+  find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
+          PATHS ${ONNX_PATH}
+          DOC "Path to onnx_proto library.")
+  message(STATUS "linking proto onnx ${ONNX_PROTO_LIBRARY}")
+  list(APPEND mxnet_LINKER_LIBS ${ONNX_PROTO_LIBRARY})
+
+  message(STATUS "target path ${ONNX_TRT_PATH}")
+  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
+          PATHS ${ONNX_TRT_PATH}
+          DOC "Path to onnx_proto library.")
+  message(STATUS "linking proto onnx ${ONNX_TRT_RUNTIME_LIBRARY}")
+  list(APPEND mxnet_LINKER_LIBS ${ONNX_TRT_RUNTIME_LIBRARY})
+
+  message(STATUS "target path ${ONNX_TRT_PATH}")
+  find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
+          PATHS ${ONNX_TRT_PATH}
+          DOC "Path to onnx_proto library.")
+  message(STATUS "linking proto onnx ${ONNX_TRT_PARSER_LIBRARY}")
+  list(APPEND mxnet_LINKER_LIBS ${ONNX_TRT_PARSER_LIBRARY})
+
 endif()
 
 if(USE_MKLDNN)
