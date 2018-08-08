@@ -18,10 +18,8 @@
 import gc
 import gluoncv
 import mxnet as mx
-import multiprocessing
 import numpy as np
 import os
-import sys
 
 from mxnet.gluon.data.vision import transforms
 from mxnet import gluon
@@ -76,9 +74,10 @@ def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True,
 
     softmax = mx.sym.SoftmaxOutput(out, name='softmax')
 
+
     all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
 
-    if not get_use_tensorrt():
+    if not use_tensorrt:
         all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
     if imagenet:
@@ -86,8 +85,13 @@ def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True,
     else:
         h, w = 32, 32 
 
-    executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,), grad_req='null',
-                                   shared_buffer=all_params, force_rebind=True)
+    if use_tensorrt:
+        executor = mx.contrib.tensorrt.optimize_graph(softmax, ctx=ctx, data=(batch_size, 3, h, w),
+                                                     softmax_label=(batch_size,), grad_req='null',
+                                                     shared_buffer=all_params, force_rebind=True)
+    else:
+        executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,),
+                                   grad_req='null', shared_buffer=all_params, force_rebind=True)
     return executor
 
 

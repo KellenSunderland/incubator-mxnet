@@ -643,6 +643,18 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
   API_END();
 }
 
+int MXTRTSymbolOptimize(SymbolHandle sym_handle,
+                        SymbolHandle *ret_sym_handle) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
+  nnvm::Graph g = Symbol2Graph(*sym);
+  g = ApplyPass(std::move(g), "QuantizeGraph");
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXQuantizeSymbol(SymbolHandle sym_handle,
                      SymbolHandle *ret_sym_handle,
                      const mx_uint num_excluded_symbols,
