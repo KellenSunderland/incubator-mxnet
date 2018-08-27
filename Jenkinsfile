@@ -313,46 +313,6 @@ core_logic: {
         }
       }
     },
-    'Build CPU windows':{
-      node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-cpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
-              utils.init_git_win()
-              powershell 'python ci/build_windows.py -f WIN_CPU'
-              stash includes: 'windows_package.7z', name: 'windows_package_cpu'
-            }
-          }
-        }
-      }
-    },
-
-    'Build GPU windows':{
-      node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-gpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
-              utils.init_git_win()
-              powershell 'python ci/build_windows.py -f WIN_GPU'
-              stash includes: 'windows_package.7z', name: 'windows_package_gpu'
-            }
-          }
-        }
-      }
-    },
-    'Build GPU MKLDNN windows':{
-      node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-gpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
-              utils.init_git_win()
-              powershell 'python ci/build_windows.py -f WIN_GPU_MKLDNN'
-              stash includes: 'windows_package.7z', name: 'windows_package_gpu_mkldnn'
-            }
-          }
-        }
-      }
-    },
     'NVidia Jetson / ARMv8':{
       node(NODE_LINUX_CPU) {
         ws('workspace/build-jetson-armv8') {
@@ -736,85 +696,6 @@ core_logic: {
             utils.unpack_lib('gpu', mx_lib)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
-          }
-        }
-      }
-    },
-
-    'Python 2: CPU Win':{
-      node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-cpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_cpu'
-              powershell 'ci/windows/test_py2_cpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python2_cpu.xml')
-            }
-          }
-        }
-      }
-    },
-    'Python 3: CPU Win': {
-      node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-cpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_cpu'
-              powershell 'ci/windows/test_py3_cpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
-            }
-          }
-        }
-      }
-    },
-    'Python 2: GPU Win':{
-      node(NODE_WINDOWS_GPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_gpu'
-              powershell 'ci/windows/test_py2_gpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
-              utils.collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
-            }
-          }
-        }
-      }
-    },
-    'Python 3: GPU Win':{
-      node(NODE_WINDOWS_GPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_gpu'
-              powershell 'ci/windows/test_py3_gpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
-              utils.collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
-            }
-          }
-        }
-      }
-    },
-    'Python 3: MKLDNN-GPU Win':{
-      node(NODE_WINDOWS_GPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_gpu_mkldnn'
-              powershell 'ci/windows/test_py3_gpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
-              utils.collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
-            }
           }
         }
       }
