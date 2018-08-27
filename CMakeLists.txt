@@ -62,6 +62,8 @@ else()
   project(mxnet C CXX)
 endif()
 
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
@@ -161,6 +163,9 @@ else(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
   endif()
 endif(MSVC)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-libasan")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-libasan")
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")

@@ -50,6 +50,13 @@ def python3_ut(docker_container_name) {
   }
 }
 
+// Python 3
+def python3_ut_asan(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
+  }
+}
+
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
@@ -464,7 +471,7 @@ core_logic: {
           try {
             utils.init_git()
             utils.unpack_lib('cpu_debug', mx_cmake_lib_debug)
-            python3_ut('ubuntu_cpu')
+            python3_ut_asan('ubuntu_cpu')
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
             utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
