@@ -635,7 +635,7 @@ unittest_ubuntu_python3_cpu_asan() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.2
-    nosetests-3.4 tests/python/unittest
+    nosetests-3.4 --verbose tests/python/unittest
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
