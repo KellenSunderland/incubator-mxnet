@@ -334,7 +334,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DCMAKE_BUILD_TYPE=Debug \
         -DUSE_GPERFTOOLS=OFF \
         -DUSE_JEMALLOC=OFF \
-        -DUSE_ASAN=ON ..
+        -DUSE_ASAN=ON /work/mxnet
     ninja -v
     popd
 }
