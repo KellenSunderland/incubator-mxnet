@@ -320,8 +320,6 @@ build_ubuntu_cpu_openblas() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
 
-    build_ccache_wrappers
-
     pushd .
     cd /work/build
     cmake \
@@ -334,8 +332,9 @@ build_ubuntu_cpu_cmake_debug() {
         -DCMAKE_BUILD_TYPE=Debug \
         -DUSE_GPERFTOOLS=OFF \
         -DUSE_JEMALLOC=OFF \
-        -DUSE_ASAN=ON /work/mxnet
-    ninja -v
+        -DUSE_ASAN=ON \
+        -G Ninja /work/mxnet
+    ninja libmxnet.so -v
     popd
 }
 
