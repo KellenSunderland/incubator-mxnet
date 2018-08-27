@@ -330,6 +330,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DUSE_OPENCV=ON \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCOMPILER_RT_BUILD_SHARED_ASAN=ON \
+        -DUSE_ASAN=ON \
         -G Ninja \
         /work/mxnet
 
