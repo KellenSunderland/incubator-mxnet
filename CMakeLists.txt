@@ -63,11 +63,6 @@ else()
   project(mxnet C CXX)
 endif()
 
-if(USE_ASAN)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address -shared-libasan")
-  set(CMAKE_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
-endif()
-
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
 else()
@@ -82,7 +77,6 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
-
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -288,6 +282,11 @@ else()
     include(Cuda)
     include(mshadow)
   endif()
+endif()
+
+if(USE_ASAN)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address -shared-libasan")
+  set(CMAKE_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})

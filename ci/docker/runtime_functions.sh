@@ -319,6 +319,10 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_cmake_debug() {
     set -ex
+
+    export CXX=clang++-6.0
+    export CC=clang-6.0
+
     pushd .
     cd /work/build
     cmake \
@@ -326,7 +330,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_OPENMP=OFF \
+        -DUSE_OPENMP=ON \
         -DUSE_OPENCV=ON \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCOMPILER_RT_BUILD_SHARED_ASAN=ON \
@@ -636,7 +640,6 @@ unittest_ubuntu_python3_cpu_asan() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export PATH=$PATH:/usr/lib/llvm-6.0/bin/ # Enable clang de-mangling of ASAN output
     export LD_PRELOAD=$LD_PRELOAD:/usr/lib/llvm-6.0/lib/clang/6.0.1/lib/linux/libclang_rt.asan-x86_64.so
-    export ASAN_OPTIONS=verbosity=1
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
