@@ -6,6 +6,9 @@ jobs:
         steps:
         - checkout
         - run:
+            name: Really checkout
+            command: 'git submodule update --init --recursive'
+        - run:
               name: Updated Brew
               command: 'brew update'
         - run:
@@ -26,3 +29,12 @@ jobs:
         - run:
               name: Install swig
               command: 'brew install swig'
+        - run:
+            name: Install python packages
+            command: 'python -m pip install --user nose numpy cython scipy'
+        - run:
+            name: Copy default MacOS config
+            command: 'mv make/osx.mk config.mk'
+        - run:
+            name: Compile
+            command: 'make -j 4'
