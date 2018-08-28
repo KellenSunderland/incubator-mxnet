@@ -1,29 +1,24 @@
-# iOS CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/ios-migrating-from-1-2/ for more details
-#
 version: 2
 jobs:
-	build:
-		macos:
-			xcode: "8.3.3"
-		steps:
-		- checkout
-		- run:
-			  name: Updated Brew
-			  command: 'brew install opencv'
-		- run:
-			  name: Install python3
-			  command: 'brew install python3'
-		- run:
-			  name: Install fftw
-			  command: 'brew install fftw'
-		- run:
-			  name: Install libpng
-			  command: 'brew install libpng'
-		- run:
-			  name: Install ImageMagick
-			  command: 'brew install ImageMagick'
-		- run:
-			  name: Install swig
-			  command: 'brew install swig'
+    build:
+        macos:
+             xcode: "8.3.3"
+        steps:
+        - checkout
+        - run:
+              name: Updated Brew
+              command: 'brew install opencv'
+        - run:
+              name: Install python3
+              command: 'brew install python3'
+        - run:
+              name: Install fftw
+              command: 'brew install fftw'
+        - run:
+              name: Install libpng
+              command: 'brew install libpng'
+        - run:
+              name: Install ImageMagick
+        - run:
+              name: Install swig
+              command: 'brew install swig'
