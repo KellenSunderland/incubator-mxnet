@@ -19,6 +19,7 @@ jobs:
               command: 'brew install libpng'
         - run:
               name: Install ImageMagick
+              command: 'brew install ImageMagick'
         - run:
               name: Install swig
               command: 'brew install swig'
