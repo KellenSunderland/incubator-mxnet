@@ -18,6 +18,8 @@ before_install:
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
 
 install:
+  - brew install ccache
+  - export PATH="/usr/local/opt/ccache/libexec:$PATH"
   - source ci/travis/install.sh
 
 script:
