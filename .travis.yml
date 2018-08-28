@@ -27,3 +27,4 @@ install:
 script:
   - mv make/osx.mk config.mk
   - make -j 2
+  - python -m nose --verbose tests/python/unittest/
