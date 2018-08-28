@@ -9,10 +9,6 @@ os:
 
 osx_image: xcode9.4
 
-env:
-  - TASK=python_test
-  - MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-
 matrix:
   include:
     - os: osx
@@ -26,6 +22,7 @@ install:
   - source ci/travis/install.sh
 
 script:
+  - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - mv make/osx.mk config.mk
   - make -j 2
   - python -m nose --verbose tests/python/unittest/
