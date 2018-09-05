@@ -21,6 +21,10 @@ install:
   - export PATH="/usr/local/opt/ccache/libexec:$PATH"
   - source ci/travis/install.sh
 
+# We build with 2 concurrent jobs to match the number of cores present on MacOS virutal machines.
+# nproc does not report the correct number of cores reliably in Travis, so using nproc is not
+# recommended.
+# https://docs.travis-ci.com/user/reference/overview/
 script:
   - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - mv make/osx.mk config.mk
