@@ -20,8 +20,25 @@
 
 FROM nvidia/cuda:9.0-cudnn7-devel
 
-COPY install/cpp.sh install/
-RUN install/cpp.sh
+# Ubuntu-core
+RUN apt-get update && \
+  apt-get install -y \
+    automake \
+    apt-transport-https \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    libcurl4-openssl-dev \
+    libjemalloc-dev \
+    liblapack-dev \
+    libopenblas-dev \
+    libopencv-dev \
+    libtool \
+    libzmq3-dev \
+    ninja-build \
+    software-properties-common
 
 RUN git clone --recursive https://github.com/apache/incubator-mxnet && cd incubator-mxnet && \
     mkdir build && cd build && cmake .. -DUSE_CUDA=1 -DUSE_CUDNN=1 && make -j $(nproc)
