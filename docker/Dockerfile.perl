@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,11 +15,12 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-# libraries for building mxnet c++ core on ubuntu
+# Dockerfile to build libmxnet.so on GPU
+FROM mxnet/base
 
-apt-get update && apt-get install -y \
-    build-essential git libatlas-base-dev libopencv-dev python-opencv \
-    libcurl4-openssl-dev libgtest-dev cmake wget unzip
-
-cd /usr/src/gtest && cmake CMakeLists.txt && make && cp *.a /usr/lib
+# install libraries for mxnet's perl package on ubuntu
+apt-get update && apt-get install -y libmouse-perl pdl cpanminus swig libgraphviz-perl
+cpanm -q Function::Parameters Hash::Ordered PDL::CCS

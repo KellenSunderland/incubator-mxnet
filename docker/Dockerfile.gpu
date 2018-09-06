@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,19 +15,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-# install libraries for mxnet's scala package on ubuntu
+# Dockerfile to build libmxnet.so on GPU
+FROM nvidia/cuda:9.0-cudnn7-devel
 
+COPY install/cpp.sh install/
+RUN install/cpp.sh
 
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:webupd8team/java
-apt-get update
-echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | debconf-set-selections
-apt-get install -y oracle-java8-installer
-apt-get install -y oracle-java8-set-default
-
-apt-get install -y maven
-
-wget http://downloads.lightbend.com/scala/2.11.8/scala-2.11.8.deb
-dpkg -i scala-2.11.8.deb
-rm scala-2.11.8.deb
+RUN git clone --recursive https://github.com/apache/incubator-mxnet && cd incubator-mxnet && \
+    mkdir build && cd build && cmake .. -DUSE_CUDA=1 -DUSE_CUDNN=1 && make -j $(nproc)

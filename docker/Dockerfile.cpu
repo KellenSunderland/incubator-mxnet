@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,21 +15,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet on Ubuntu 16.04 for CPU
 
-# install libraries for mxnet's r package on ubuntu
+# Dockerfile to build libmxnet.so on CPU
+FROM ubuntu:16.04
 
-echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
-gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
-gpg -a --export E084DAB9 | apt-key add -
+COPY install/cpp.sh install/
+RUN install/cpp.sh
 
-apt-get update
-apt-get install -y r-base r-base-dev libxml2-dev libxt-dev libssl-dev
-
-cd "$(dirname "${BASH_SOURCE[0]}")"
-
-if [ ! -f "./DESCRIPTION" ]; then
-    cp ../../R-package/DESCRIPTION .
-fi
-
-Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
-Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+RUN git clone --recursive https://github.com/apache/incubator-mxnet && cd incubator-mxnet && \
+    mkdir build && cd build && cmake .. -DUSE_CUDA=0 -DUSE_CUDNN=0 && make -j $(nproc)

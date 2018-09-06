@@ -19,11 +19,22 @@
 
 # Build and push all docker containers
 
-DEVICES=('cpu' 'gpu')
-LANGUAGES=('python' 'julia' 'r-lang' 'scala' 'perl')
-for DEV in "${DEVICES[@]}"; do
-    for LANG in "${LANGUAGES[@]}"; do
-        ./tool.sh build ${LANG} ${DEV}
-        ./tool.sh push ${LANG} ${DEV}
+# These containers either function on their own, or are used as base containers for images with
+# language runtimes installed.
+
+set -ex
+
+SOLO_DOCKERFILES=('tensorrt')
+BASE_DOCKERFILES=('cpu' 'gpu')
+LANGUAGE_EXTENSIONS=('r-lang' 'perl')
+
+for DOCKERFILE_SOLO in "${SOLO_DOCKERFILES[@]}"; do
+    docker build -f Dockerfile.${DOCKERFILE_SOLO} . -t "mxnet/${DOCKERFILE_SOLO}:latest"
+done
+
+for DOCKERFILE_BASE in "${BASE_DOCKERFILES[@]}"; do
+    docker build -f Dockerfile.${DOCKERFILE_BASE} . -t "mxnet/base:latest"
+    for DOCKERFILE_LANG in "${LANGUAGE_EXTENSIONS[@]}"; do
+        docker build -f Dockerfile.${DOCKERFILE_LANG} . -t "mxnet/${DOCKERFILE_LANG}:latest"
     done
 done
