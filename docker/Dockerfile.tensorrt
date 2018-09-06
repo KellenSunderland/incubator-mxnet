@@ -43,8 +43,7 @@ RUN apt-get update && \
     python3-pip \
     software-properties-common \
     wget \
-    unzip \
-    vim
+    unzip
 
 RUN unlink /usr/bin/python && \
     ln -s $(which python3) /usr/bin/python && \
