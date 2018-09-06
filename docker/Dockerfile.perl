@@ -15,10 +15,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-# Dockerfile to build libmxnet.so on GPU
 FROM mxnet/base
 
 # install libraries for mxnet's perl package on ubuntu

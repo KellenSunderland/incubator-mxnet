@@ -18,7 +18,6 @@
 #
 # Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-# Dockerfile to build libmxnet.so on GPU
 FROM nvidia/cuda:9.0-cudnn7-devel
 
 COPY install/cpp.sh install/
