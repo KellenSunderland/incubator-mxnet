@@ -26,7 +26,7 @@ set -ex
 
 SOLO_DOCKERFILES=('tensorrt')
 BASE_DOCKERFILES=('cpu' 'gpu')
-LANGUAGE_EXTENSIONS=('r-lang' 'perl')
+LANGUAGE_EXTENSIONS=('r-lang')
 
 for DOCKERFILE_SOLO in "${SOLO_DOCKERFILES[@]}"; do
     docker build -f Dockerfile.${DOCKERFILE_SOLO} . -t "mxnet/${DOCKERFILE_SOLO}:latest"
