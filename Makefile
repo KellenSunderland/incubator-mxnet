@@ -98,7 +98,6 @@ ifeq ($(USE_TENSORRT), 1)
 	-l:libnvonnxparser_runtime_static.a -l:libnvonnxparser_plugin.a  -lnvinfer -lnvinfer_plugin \
 	-l:libonnx_proto.a -l:libonnxtrt_proto.a
 endif
-# -L/usr/local/lib
 
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)

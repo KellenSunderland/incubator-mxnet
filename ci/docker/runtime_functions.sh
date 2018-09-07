@@ -482,6 +482,9 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p /work/mxnet/lib/
 
     rm -rf build
+
+    # TODO (kellens): Change to sm_61, sm_70, compute_70 when PyPi package size updated.
+
     make \
         DEV=0                                               \
         USE_BLAS=openblas                                   \
@@ -494,12 +497,10 @@ build_ubuntu_gpu_tensorrt() {
         USE_JEMALLOC=0                                      \
         USE_GPERFTOOLS=0                                    \
         ONNX_NAMESPACE=onnx                                 \
-        CUDA_ARCH="-gencode arch=compute_60,code=sm_60 \
-                   -gencode arch=compute_61,code=sm_61 \
-                   -gencode arch=compute_70,code=sm_70 \
-                   -gencode arch=compute_70,code=compute_70"\
+        CUDA_ARCH="-gencode arch=compute_61,code=compute_61"\
         -j$(nproc)
 
+    strip lib/libmxnet.so
     build_wheel /work/mxnet/python /work/mxnet/lib
 }
 
