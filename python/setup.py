@@ -100,7 +100,7 @@ def config_cython():
         return []
 
 
-setup(name='mxnet',
+setup(name='mxnet-tensorrt-cu90',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
       packages=find_packages(),
