@@ -16,9 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to run MXNet on Ubuntu 16.04 for CPU
+# Dockerfile to run MXNet on Ubuntu 16.04 for TensorRT
 
-FROM nvidia/cuda:9.0-cudnn7-devel
+FROM nvidia/cuda:9.2-cudnn7-devel
 
 WORKDIR /work/deps
 
