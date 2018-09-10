@@ -322,8 +322,8 @@ build_ubuntu_cpu_cmake_asan() {
 
     pushd .
     cd /work/build
-    export CC="ccache gcc-8"
-    export CXX="ccache g++-8"
+    export CC="gcc-8"
+    export CXX="g++-8"
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -336,7 +336,9 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_CPP_PACKAGE=ON \
         -DMXNET_USE_CPU=ON \
         /work/mxnet
-    make -j $(nproc) libmxnet.so
+    make -j $(nproc) mxnet
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
+    make -j $(nproc) lenet alexnet
     popd
 }
 
