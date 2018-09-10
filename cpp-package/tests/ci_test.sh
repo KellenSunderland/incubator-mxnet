@@ -15,12 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e # exit on the first error
+set -ex # exit on the first error
 cd $(dirname $(readlink -f $0))/../example
 echo $PWD
 export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$(readlink -f ../../build):$LD_LIBRARY_PATH
 echo $LD_LIBRARY_PATH
-ls -l ../../lib/
 
 ./get_data.sh
 
@@ -45,8 +45,8 @@ cp ../../build/cpp-package/example/mlp_cpu .
 cp ../../build/cpp-package/example/mlp_gpu .
 ./mlp_gpu
 
- cp ../../build/cpp-package/example/test_optimizer .
- ./test_optimizer
+cp ../../build/cpp-package/example/test_optimizer .
+./test_optimizer
 
 cp ../../build/cpp-package/example/test_score .
 ./test_score 0.93
