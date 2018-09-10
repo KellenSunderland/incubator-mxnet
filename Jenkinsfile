@@ -166,7 +166,7 @@ core_logic: {
         ws('workspace/build-cpu-asan') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', true)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
             utils.pack_lib('cpu_asan', mx_lib_cpp_examples_cpu)
           }
         }
@@ -470,7 +470,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-asan') {
             utils.unpack_and_init('cpu_asan', mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
+            utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', false)
         }
       }
     },
