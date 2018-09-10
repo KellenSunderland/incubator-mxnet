@@ -470,7 +470,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-asan') {
             utils.unpack_and_init('cpu_asan', mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_cpu_asan', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
         }
       }
     },
