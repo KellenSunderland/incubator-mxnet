@@ -31,6 +31,8 @@ mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-c
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
+mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, build/cpp-package/example/lenet, build/cpp-package/example/alexnet, build/cpp-package/example/googlenet, build/cpp-package/example/lenet_with_mxdataiter, build/cpp-package/example/resnet, build/cpp-package/example/mlp, build/cpp-package/example/mlp_cpu, build/cpp-package/example/mlp_gpu, build/cpp-package/example/test_score, build/cpp-package/example/test_optimizer
+
 // timeout in minutes
 max_time = 120
 
@@ -113,7 +115,6 @@ core_logic: {
       }
     }
   }
-
   stage('Build') {
     parallel 'CPU: CentOS 7': {
       node(NODE_LINUX_CPU) {
@@ -165,7 +166,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
-            utils.pack_lib('cpu_asan', mx_lib)
+            utils.pack_lib('cpu_asan', mx_lib_cpp_examples)
           }
         }
       }
@@ -272,17 +273,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-            utils.pack_lib('gpu', mx_dist_lib)
-            stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
-            stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
-            stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
-            stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
-            stash includes: 'build/cpp-package/example/resnet', name: 'cpp_resnet'
-            stash includes: 'build/cpp-package/example/mlp', name: 'cpp_mlp'
-            stash includes: 'build/cpp-package/example/mlp_cpu', name: 'cpp_mlp_cpu'
-            stash includes: 'build/cpp-package/example/mlp_gpu', name: 'cpp_mlp_gpu'
-            stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
-            stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
+            utils.pack_lib('gpu', mx_lib_cpp_examples)
           }
         }
       }
@@ -476,12 +467,12 @@ core_logic: {
         }
       }
     },
-    'Python3: CPU ASAN': {
+    'CPU ASAN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-asan') {
             utils.init_git()
-            utils.unpack_lib('cpu_asan', mx_lib)
-            python3_ut_asan('ubuntu_cpu')
+            utils.unpack_lib('cpu_asan', mx_lib_cpp_examples)
+            utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
         }
       }
     },
@@ -880,35 +871,12 @@ core_logic: {
         }
       }
     },
-    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
-    // 'Caffe GPU': {
-    //   node(NODE_LINUX_GPU) {
-    //     ws('workspace/it-caffe') {
-    //       timeout(time: max_time, unit: 'MINUTES') {
-    //         utils.init_git()
-    //         utils.unpack_lib('gpu', mx_lib)
-    //         utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
-    //         utils.publish_test_coverage()
-    //       }
-    //     }
-    //   }
-    // },
     'cpp-package GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
-            unstash 'cpp_lenet'
-            unstash 'cpp_alexnet'
-            unstash 'cpp_googlenet'
-            unstash 'cpp_lenet_with_mxdataiter'
-            unstash 'cpp_resnet'
-            unstash 'cpp_mlp'
-            unstash 'cpp_mlp_cpu'
-            unstash 'cpp_mlp_gpu'
-            unstash 'cpp_test_score'
-            unstash 'cpp_test_optimizer'
+            utils.unpack_lib('gpu', mx_lib_cpp_examples)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
             utils.publish_test_coverage()
           }
