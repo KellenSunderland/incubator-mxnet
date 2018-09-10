@@ -289,6 +289,7 @@ def container_run(platform: str,
             command=command,
             shm_size=shared_memory_size,
             user='{}:{}'.format(os.getuid(), os.getgid()),
+            cap_add='SYS_PTRACE',
             volumes={
                 mx_root:
                     {'bind': '/work/mxnet', 'mode': 'rw'},
