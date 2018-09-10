@@ -142,6 +142,7 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     #
     cmd = [docker_binary, "build",
            "-f", get_dockerfile(platform),
+           "--cap-add SYS_PTRACE", # Required by ASAN
            "--build-arg", "USER_ID={}".format(os.getuid()),
            "--build-arg", "GROUP_ID={}".format(os.getgid())]
     if use_cache:
