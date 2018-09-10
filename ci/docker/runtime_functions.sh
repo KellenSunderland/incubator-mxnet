@@ -317,6 +317,29 @@ build_ubuntu_cpu_openblas() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_cmake_asan() {
+    set -ex
+
+    pushd .
+    cd /work/build
+    export CC="ccache gcc-8"
+    export CXX="ccache g++-8"
+    cmake \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=OFF \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_GPERFTOOLS=OFF \
+        -DUSE_JEMALLOC=OFF \
+        -DUSE_ASAN=ON \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        /work/mxnet
+    make -j $(nproc) libmxnet.so
+    popd
+}
+
 build_ubuntu_cpu_cmake_debug() {
     set -ex
 
@@ -328,11 +351,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_OPENCV=OFF \
         -DCMAKE_BUILD_TYPE=Debug \
-        -DUSE_GPERFTOOLS=OFF \
-        -DUSE_JEMALLOC=OFF \
-        -DUSE_ASAN=ON \
         -G Ninja /work/mxnet
     ninja libmxnet.so -v
     popd
@@ -633,7 +652,7 @@ unittest_ubuntu_python3_cpu_asan() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.2
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
     nosetests-3.4 --verbose tests/python/unittest
 }
 

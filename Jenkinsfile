@@ -159,6 +159,17 @@ core_logic: {
         }
       }
     },
+    'CPU: ASAN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-asan') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
+            utils.pack_lib('cpu_asan', mx_lib)
+          }
+        }
+      }
+    },
     'CPU: Openblas, debug': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-openblas') {
@@ -465,13 +476,22 @@ core_logic: {
         }
       }
     },
+    'Python3: CPU ASAN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu-asan') {
+            utils.init_git()
+            utils.unpack_lib('cpu_asan', mx_lib)
+            python3_ut_asan('ubuntu_cpu')
+        }
+      }
+    },
     'Python3: CPU debug': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-debug') {
           try {
             utils.init_git()
             utils.unpack_lib('cpu_debug', mx_cmake_lib_debug)
-            python3_ut_asan('ubuntu_cpu')
+            python3_ut('ubuntu_cpu')
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
             utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
