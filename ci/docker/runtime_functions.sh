@@ -337,8 +337,8 @@ build_ubuntu_cpu_cmake_asan() {
         -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
-    make -j $(nproc) lenet alexnet
+    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
+    make -j $(nproc) lenet alexnet googlenet lenet_with_mxdataiter resnet mlp mlp_cpu
     popd
 }
 
