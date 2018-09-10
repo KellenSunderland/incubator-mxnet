@@ -178,7 +178,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
-            utils.pack_lib('cpu_debug', mx_lib_cpp_examples)
+            utils.pack_lib('cpu_debug', mx_cmake_lib_debug)
           }
         }
       }

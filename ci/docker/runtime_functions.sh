@@ -317,6 +317,24 @@ build_ubuntu_cpu_openblas() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_cmake_debug() {
+    set -ex
+
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja /work/mxnet
+    ninja -v
+    popd
+}
+
 build_ubuntu_cpu_cmake_asan() {
     set -ex
 
@@ -342,23 +360,6 @@ build_ubuntu_cpu_cmake_asan() {
     ASAN_OPTIONS=detect_leaks=0 \
     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
     make -j $(nproc) lenet alexnet googlenet lenet_with_mxdataiter resnet mlp mlp_cpu
-    popd
-}
-
-build_ubuntu_cpu_cmake_debug() {
-    set -ex
-
-    pushd .
-    cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_OPENMP=OFF \
-        -DCMAKE_BUILD_TYPE=Debug \
-        -G Ninja /work/mxnet
-    ninja libmxnet.so -v
     popd
 }
 
