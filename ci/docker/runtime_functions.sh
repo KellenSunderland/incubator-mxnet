@@ -330,7 +330,8 @@ build_ubuntu_cpu_cmake_debug() {
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DCMAKE_BUILD_TYPE=Debug \
-        -G Ninja /work/mxnet
+        -G Ninja \
+        /work/mxnet
     ninja -v
     popd
 }
