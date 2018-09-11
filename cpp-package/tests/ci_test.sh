@@ -17,7 +17,7 @@
 
 set -ex # exit on the first error
 cd $(dirname $(readlink -f $0))/../example
-echo $PWD
+echo `pwd`
 export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$(readlink -f ../../build):$LD_LIBRARY_PATH
 echo $LD_LIBRARY_PATH
