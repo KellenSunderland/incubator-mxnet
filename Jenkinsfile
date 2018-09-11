@@ -116,6 +116,7 @@ core_logic: {
       }
     }
   }
+
   stage('Build') {
     parallel 'CPU: CentOS 7': {
       node(NODE_LINUX_CPU) {
