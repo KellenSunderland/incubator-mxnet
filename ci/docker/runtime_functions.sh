@@ -319,7 +319,6 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_cmake_debug() {
     set -ex
-
     pushd .
     cd /work/build
     cmake \
@@ -332,6 +331,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DCMAKE_BUILD_TYPE=Debug \
         -G Ninja \
         /work/mxnet
+
     ninja -v
     popd
 }

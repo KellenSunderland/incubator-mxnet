@@ -63,6 +63,7 @@ else()
   project(mxnet C CXX)
 endif()
 
+
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
 else()
@@ -77,6 +78,7 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
+
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
