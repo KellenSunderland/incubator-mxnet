@@ -829,6 +829,7 @@ integrationtest_ubuntu_gpu_caffe() {
 integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
+    ln -s /work/mxnet/cpp-package/example/data data
     cpp-package/tests/ci_test.sh
 }
 

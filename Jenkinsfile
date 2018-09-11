@@ -895,7 +895,6 @@ core_logic: {
       }
     }
   }
-
   stage('Deploy') {
     node(NODE_LINUX_CPU) {
       ws('workspace/docs') {
