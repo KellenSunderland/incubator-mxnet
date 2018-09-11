@@ -357,9 +357,10 @@ build_ubuntu_cpu_cmake_asan() {
         -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
+    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
     ASAN_OPTIONS=detect_leaks=0 \
     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
-    make -j $(nproc) lenet alexnet googlenet lenet_with_mxdataiter resnet mlp mlp_cpu
+    make -j $(nproc) mlp_cpu
     popd
 }
 
@@ -654,14 +655,6 @@ unittest_ubuntu_python3_cpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
-unittest_ubuntu_python3_cpu_asan() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
-    nosetests-3.4 --verbose tests/python/unittest
-}
-
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
@@ -829,8 +822,9 @@ integrationtest_ubuntu_gpu_caffe() {
 integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
-    ln -s /work/mxnet/cpp-package/example/data data
-    cpp-package/tests/ci_test.sh
+    cd /work/mxnet/build/cpp-package/example/
+    /work/mxnet/cpp-package/example/get_data.sh
+    ./mlp_cpu
 }
 
 integrationtest_ubuntu_gpu_cpp_package() {
