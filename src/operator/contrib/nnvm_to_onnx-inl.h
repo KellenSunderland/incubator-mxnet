@@ -133,6 +133,11 @@ void ConvertElementwiseAdd(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
+void ConvertElementwiseMul(NodeProto *node_proto,
+                           const NodeAttrs &attrs,
+                           const nnvm::IndexedGraph &ig,
+                           const array_view<IndexedGraph::NodeEntry> &inputs);
+
 TRTParam ConvertNnvmGraphToOnnx(
     const nnvm::Graph &g,
     std::unordered_map<std::string, NDArray> *const shared_buffer);
@@ -145,7 +150,8 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"SoftmaxOutput", ConvertSoftmaxOutput},
   {"Flatten", ConvertFlatten},
   {"BatchNorm", ConvertBatchNorm},
-  {"elemwise_add", ConvertElementwiseAdd}};
+  {"elemwise_add", ConvertElementwiseAdd},
+  {"elemwise_mul", ConvertElementwiseMul}};
 
 }  // namespace nnvm_to_onnx
 }  // namespace op

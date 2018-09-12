@@ -409,6 +409,21 @@ void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
   broadcast->set_i(0);  // 1
 }
 
+void ConvertElementwiseMul(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Mul");
+  AttributeProto* const axis = node_proto->add_attribute();
+  axis->set_name("axis");
+  axis->set_type(AttributeProto::INT);
+  axis->set_i(1);
+
+  AttributeProto* const broadcast = node_proto->add_attribute();
+  broadcast->set_name("broadcast");
+  broadcast->set_type(AttributeProto::INT);
+  broadcast->set_i(0);  // 1
+}
+
 std::unordered_map<std::string, TShape> GetPlaceholderShapes(
     const ShapeVector& shape_inputs, const nnvm::IndexedGraph& ig) {
   std::unordered_map<std::string, TShape> placeholder_shapes;
