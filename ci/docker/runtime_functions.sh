@@ -620,7 +620,9 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_MKLML_MKL=1                    \
         -DUSE_MKLDNN=1                       \
         -DCMAKE_BUILD_TYPE=Release           \
-        -DCUDA_ARCH_NAME=Maxwell             \
+        -DCUDA_ARCH_NAME=Manual              \
+        -DCUDA_ARCH_BIN=52                   \
+        -DCUDA_ARCH_PTX=52                   \
         -G Ninja                             \
         /work/mxnet
 
@@ -643,7 +645,9 @@ build_ubuntu_gpu_cmake() {
         -DUSE_MKLDNN=0                       \
         -DUSE_DIST_KVSTORE=1                 \
         -DCMAKE_BUILD_TYPE=Release           \
-        -DCUDA_ARCH_NAME=Maxwell             \
+        -DCUDA_ARCH_NAME=Manual              \
+        -DCUDA_ARCH_BIN=52                   \
+        -DCUDA_ARCH_PTX=52                   \
         -G Ninja                             \
         /work/mxnet
 
