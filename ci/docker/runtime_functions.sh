@@ -293,15 +293,16 @@ build_centos7_gpu() {
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
     make \
-        DEV=1 \
-        ENABLE_TESTCOVERAGE=1 \
-        USE_LAPACK=1 \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_BLAS=openblas \
-        USE_CUDA=1 \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1 \
-        USE_DIST_KVSTORE=1 \
+        DEV=1                                                \
+        ENABLE_TESTCOVERAGE=1                                \
+        USE_LAPACK=1                                         \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so              \
+        USE_BLAS=openblas                                    \
+        USE_CUDA=1                                           \
+        USE_CUDA_PATH=/usr/local/cuda                        \
+        USE_CUDNN=1                                          \
+        USE_DIST_KVSTORE=1                                   \
+        CUDA_ARCH="-gencode arch=compute_52,code=compute_52" \
         -j$(nproc)
 }
 
@@ -520,19 +521,19 @@ build_ubuntu_gpu_tensorrt() {
 
     rm -rf build
     make \
-        DEV=1                                               \
-        ENABLE_TESTCOVERAGE=1                               \
-        USE_BLAS=openblas                                   \
-        USE_CUDA=1                                          \
-        USE_CUDA_PATH=/usr/local/cuda                       \
-        USE_CUDNN=1                                         \
-        USE_OPENCV=0                                        \
-        USE_DIST_KVSTORE=0                                  \
-        USE_TENSORRT=1                                      \
-        USE_JEMALLOC=0                                      \
-        USE_GPERFTOOLS=0                                    \
-        ONNX_NAMESPACE=onnx                                 \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
+        DEV=1                                                \
+        ENABLE_TESTCOVERAGE=1                                \
+        USE_BLAS=openblas                                    \
+        USE_CUDA=1                                           \
+        USE_CUDA_PATH=/usr/local/cuda                        \
+        USE_CUDNN=1                                          \
+        USE_OPENCV=0                                         \
+        USE_DIST_KVSTORE=0                                   \
+        USE_TENSORRT=1                                       \
+        USE_JEMALLOC=0                                       \
+        USE_GPERFTOOLS=0                                     \
+        ONNX_NAMESPACE=onnx                                  \
+        CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
         -j$(nproc)
 }
 
@@ -542,14 +543,15 @@ build_ubuntu_gpu_mkldnn() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1                   \
+        DEV=1                                                \
+        ENABLE_TESTCOVERAGE=1                                \
+        USE_CPP_PACKAGE=1                                    \
+        USE_BLAS=openblas                                    \
+        USE_MKLDNN=1                                         \
+        USE_CUDA=1                                           \
+        USE_CUDA_PATH=/usr/local/cuda                        \
+        USE_CUDNN=1                                          \
+        CUDA_ARCH="-gencode arch=compute_52,code=compute_52" \
         -j$(nproc)
 }
 
@@ -559,13 +561,14 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=0                   \
+        DEV=1                                                \
+        ENABLE_TESTCOVERAGE=1                                \
+        USE_BLAS=openblas                                    \
+        USE_MKLDNN=1                                         \
+        USE_CUDA=1                                           \
+        USE_CUDA_PATH=/usr/local/cuda                        \
+        USE_CUDNN=0                                          \
+        CUDA_ARCH="-gencode arch=compute_52,code=compute_52" \
         -j$(nproc)
 }
 
@@ -574,14 +577,15 @@ build_ubuntu_gpu_cuda91_cudnn7() {
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
     make \
-        DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
-        USE_BLAS=openblas             \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1                   \
-        USE_CPP_PACKAGE=1             \
-        USE_DIST_KVSTORE=1            \
+        DEV=1                                                \
+        ENABLE_TESTCOVERAGE=1                                \
+        USE_BLAS=openblas                                    \
+        USE_CUDA=1                                           \
+        USE_CUDA_PATH=/usr/local/cuda                        \
+        USE_CUDNN=1                                          \
+        USE_CPP_PACKAGE=1                                    \
+        USE_DIST_KVSTORE=1                                   \
+        CUDA_ARCH="-gencode arch=compute_52,code=compute_52" \
         -j$(nproc)
 }
 
