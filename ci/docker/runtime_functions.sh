@@ -613,14 +613,15 @@ build_ubuntu_gpu_cmake_mkldnn() {
     cd /work/build
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DENABLE_TESTCOVERAGE=ON   \
-        -DUSE_CUDA=1               \
-        -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=1          \
-        -DUSE_MKLDNN=1             \
-        -DCMAKE_BUILD_TYPE=Release \
-        -G Ninja                   \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache   \
+        -DENABLE_TESTCOVERAGE=ON             \
+        -DUSE_CUDA=1                         \
+        -DUSE_CUDNN=1                        \
+        -DUSE_MKLML_MKL=1                    \
+        -DUSE_MKLDNN=1                       \
+        -DCMAKE_BUILD_TYPE=Release           \
+        -DCUDA_ARCH_NAME=Maxwell             \
+        -G Ninja                             \
         /work/mxnet
 
     ninja -v
@@ -634,15 +635,16 @@ build_ubuntu_gpu_cmake() {
     cd /work/build
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DENABLE_TESTCOVERAGE=ON   \
-        -DUSE_CUDA=1               \
-        -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=0          \
-        -DUSE_MKLDNN=0             \
-        -DUSE_DIST_KVSTORE=1       \
-        -DCMAKE_BUILD_TYPE=Release \
-        -G Ninja                   \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache   \
+        -DENABLE_TESTCOVERAGE=ON             \
+        -DUSE_CUDA=1                         \
+        -DUSE_CUDNN=1                        \
+        -DUSE_MKLML_MKL=0                    \
+        -DUSE_MKLDNN=0                       \
+        -DUSE_DIST_KVSTORE=1                 \
+        -DCMAKE_BUILD_TYPE=Release           \
+        -DCUDA_ARCH_NAME=Maxwell             \
+        -G Ninja                             \
         /work/mxnet
 
     ninja -v
