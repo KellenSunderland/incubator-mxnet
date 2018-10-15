@@ -535,7 +535,7 @@ build_ubuntu_gpu_tensorrt() {
         USE_JEMALLOC=0                                      \
         USE_GPERFTOOLS=0                                    \
         ONNX_NAMESPACE=onnx                                 \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
+        CUDA_ARCH="-gencode arch=compute_37,code=sm_37"     \
         -j$(nproc)
 
     build_wheel /work/mxnet/python /work/mxnet/lib
