@@ -522,22 +522,23 @@ build_ubuntu_gpu_tensorrt() {
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
-    rm -rf build
-    make \
-        DEV=1                                                \
-        ENABLE_TESTCOVERAGE=1                                \
-        USE_BLAS=openblas                                    \
-        USE_CUDA=1                                           \
-        USE_CUDA_PATH=/usr/local/cuda                        \
-        USE_CUDNN=1                                          \
-        USE_OPENCV=0                                         \
-        USE_DIST_KVSTORE=0                                   \
-        USE_TENSORRT=1                                       \
-        USE_JEMALLOC=0                                       \
-        USE_GPERFTOOLS=0                                     \
-        ONNX_NAMESPACE=onnx                                  \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
-        -j$(nproc)
+    cd /work/build
+    cmake -DUSE_CUDA=1                            \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+          -DUSE_CUDNN=1                           \
+          -DUSE_OPENCV=1                          \
+          -DUSE_TENSORRT=1                        \
+          -DUSE_OPENMP=0                          \
+          -DUSE_MKLDNN=0                          \
+          -DUSE_MKL_IF_AVAILABLE=OFF              \
+          -DENABLE_TESTCOVERAGE=ON                \
+          -DCUDA_ARCH_NAME=Manual                 \
+          -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+          -G Ninja                                \
+          /work/mxnet
+
+    ninja -v
 }
 
 build_ubuntu_gpu_mkldnn() {
@@ -729,7 +730,6 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=7.0.3
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
